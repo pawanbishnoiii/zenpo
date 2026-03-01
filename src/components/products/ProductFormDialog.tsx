@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Package, Loader2, Barcode, QrCode } from 'lucide-react';
+import { X, Package, Loader2, Barcode, QrCode, ImagePlus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import BarcodeLabel from './BarcodeLabel';
 
@@ -24,17 +23,14 @@ const ProductFormDialog = ({ open, onClose, onCreated, businessId, businessName 
   const [loading, setLoading] = useState(false);
   const [showBarcode, setShowBarcode] = useState(false);
   const [lastCreated, setLastCreated] = useState<any>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [form, setForm] = useState({
-    name: '',
-    description: '',
-    category: 'Car Wash',
-    sku: generateSKU(),
-    barcode_value: generateBarcode(),
-    price: '',
-    discount_price: '',
-    tax_percent: '18',
-    stock: '',
-    image_url: '',
+    name: '', description: '', category: 'Car Wash', sku: generateSKU(),
+    barcode_value: generateBarcode(), price: '', discount_price: '', tax_percent: '18', stock: '', image_url: '',
   });
 
   const handleChange = (field: string, value: string) => {
@@ -46,6 +42,48 @@ const ProductFormDialog = ({ open, onClose, onCreated, businessId, businessName 
       name: '', description: '', category: 'Car Wash', sku: generateSKU(),
       barcode_value: generateBarcode(), price: '', discount_price: '', tax_percent: '18', stock: '', image_url: '',
     });
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Too large', description: 'Image must be under 5MB', variant: 'destructive' });
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImage = async (): Promise<string> => {
+    if (!imageFile || !businessId) return '';
+
+    setUploadingImage(true);
+    try {
+      const ext = imageFile.name.split('.').pop();
+      const path = `${businessId}/${Date.now()}.${ext}`;
+
+      const { error } = await supabase.storage.from('product-images').upload(path, imageFile, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+      return '';
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,8 +92,14 @@ const ProductFormDialog = ({ open, onClose, onCreated, businessId, businessName 
       toast({ title: 'Error', description: 'No business found. Please set up your business first.', variant: 'destructive' });
       return;
     }
+
     setLoading(true);
     try {
+      let imageUrl = form.image_url;
+      if (imageFile) {
+        imageUrl = await uploadImage();
+      }
+
       const productData = {
         business_id: businessId,
         name: form.name,
@@ -68,7 +112,7 @@ const ProductFormDialog = ({ open, onClose, onCreated, businessId, businessName 
         discount_price: parseFloat(form.discount_price) || parseFloat(form.price) || 0,
         tax_percent: parseFloat(form.tax_percent) || 18,
         stock: parseInt(form.stock) || 0,
-        image_url: form.image_url,
+        image_url: imageUrl,
       };
 
       const { error } = await supabase.from('products').insert(productData);
@@ -124,6 +168,34 @@ const ProductFormDialog = ({ open, onClose, onCreated, businessId, businessName 
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="p-4 space-y-3 overflow-y-auto max-h-[70vh] no-scrollbar">
+                {/* Image Upload */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Product Image</label>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                  {imagePreview ? (
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border">
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => { setImageFile(null); setImagePreview(null); }}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-destructive/90 flex items-center justify-center"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-destructive-foreground" />
+                      </button>
+                    </div>
+                  ) : (
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+                    >
+                      <ImagePlus className="w-6 h-6" />
+                      <span className="text-xs">Tap to upload image (max 5MB)</span>
+                    </motion.button>
+                  )}
+                </div>
+
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Product Name *</label>
                   <input
@@ -212,12 +284,12 @@ const ProductFormDialog = ({ open, onClose, onCreated, businessId, businessName 
 
                 <motion.button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || uploadingImage}
                   whileTap={{ scale: 0.97 }}
                   className="w-full py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm glow-primary flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Add Product
+                  {(loading || uploadingImage) ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {uploadingImage ? 'Uploading Image...' : loading ? 'Creating...' : 'Add Product'}
                 </motion.button>
               </form>
             </motion.div>
@@ -225,7 +297,6 @@ const ProductFormDialog = ({ open, onClose, onCreated, businessId, businessName 
         )}
       </AnimatePresence>
 
-      {/* Barcode Label after creation */}
       {lastCreated && (
         <BarcodeLabel
           open={showBarcode}

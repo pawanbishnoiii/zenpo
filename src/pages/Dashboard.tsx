@@ -87,15 +87,15 @@ const Dashboard = () => {
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0} />
+                  <stop offset="5%" stopColor="hsl(24, 95%, 53%)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(24, 95%, 53%)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 90%)" strokeOpacity={0.3} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(220, 10%, 50%)' }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(20, 14%, 90%)" strokeOpacity={0.3} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(20, 10%, 50%)' }} axisLine={false} tickLine={false} />
               <YAxis hide />
-              <Tooltip contentStyle={{ background: 'hsl(222, 25%, 12%)', border: 'none', borderRadius: '12px', color: 'hsl(210, 20%, 95%)', fontSize: '12px' }} />
-              <Area type="monotone" dataKey="revenue" stroke="hsl(199, 89%, 48%)" strokeWidth={2.5} fill="url(#revenueGradient)" />
+              <Tooltip contentStyle={{ background: 'hsl(15, 25%, 10%)', border: 'none', borderRadius: '12px', color: 'hsl(20, 20%, 95%)', fontSize: '12px' }} />
+              <Area type="monotone" dataKey="revenue" stroke="hsl(24, 95%, 53%)" strokeWidth={2.5} fill="url(#revenueGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
