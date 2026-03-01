@@ -53,8 +53,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let bootstrapped = false;
 
-    const syncSession = async (nextSession: Session | null) => {
+    const applySession = (nextSession: Session | null) => {
       if (!mounted) return;
 
       setSession(nextSession);
@@ -65,24 +66,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setIsAdmin(false);
       }
-
-      setLoading(false);
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void syncSession(nextSession);
+    const bootstrapSession = async () => {
+      try {
+        const {
+          data: { session: nextSession },
+        } = await withTimeout(supabase.auth.getSession());
+
+        applySession(nextSession);
+      } catch {
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+        setIsAdmin(false);
+      } finally {
+        if (!mounted) return;
+        bootstrapped = true;
+        setLoading(false);
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      applySession(nextSession);
+      if (bootstrapped && mounted) {
+        setLoading(false);
+      }
     });
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session: nextSession } }) => {
-        void syncSession(nextSession);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setLoading(false);
-        setIsAdmin(false);
-      });
+    void bootstrapSession();
 
     return () => {
       mounted = false;
