@@ -50,7 +50,6 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signIn(email.trim(), password);
         if (error) throw error;
-        navigate('/', { replace: true });
       } else {
         const { error } = await signUp(email.trim(), password, name.trim());
         if (error) throw error;
