@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -14,41 +14,75 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const getErrorMessage = (err: unknown) => {
+    const fallback = 'Something went wrong. Please try again.';
+    if (!err) return fallback;
+
+    const message = err instanceof Error ? err.message : String(err);
+
+    if (!navigator.onLine) return 'No internet connection. Please check network and retry.';
+    if (message.toLowerCase().includes('failed to fetch')) {
+      return 'Unable to reach backend right now. Please retry in a few seconds.';
+    }
+
+    return message || fallback;
+  };
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!navigator.onLine) {
+      toast({ title: 'No internet', description: 'Please reconnect and try again.', variant: 'destructive' });
+      return;
+    }
+
     setLoading(true);
     try {
       if (isLogin) {
-        const { error } = await signIn(email, password);
+        const { error } = await signIn(email.trim(), password);
         if (error) throw error;
-        navigate('/');
+        navigate('/', { replace: true });
       } else {
-        const { error } = await signUp(email, password, name);
+        const { error } = await signUp(email.trim(), password, name.trim());
         if (error) throw error;
-        toast({ title: 'Account created!', description: 'Please check your email to verify your account.' });
+        toast({ title: 'Account created!', description: 'Check your email to verify, then login.' });
+        setIsLogin(true);
+        setPassword('');
       }
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Auth Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleOAuth = async (provider: 'google' | 'apple') => {
+    if (!navigator.onLine) {
+      toast({ title: 'No internet', description: 'Please reconnect and try again.', variant: 'destructive' });
+      return;
+    }
+
     setOauthLoading(provider);
     try {
       const { error } = await lovable.auth.signInWithOAuth(provider, {
         redirect_uri: window.location.origin,
+        extraParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
       });
+
       if (error) {
-        toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
+        toast({ title: 'Auth Error', description: getErrorMessage(error), variant: 'destructive' });
       }
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Auth Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setOauthLoading(null);
     }
@@ -96,7 +130,7 @@ const Auth = () => {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => handleOAuth('google')}
-            disabled={!!oauthLoading}
+             disabled={!!oauthLoading || authLoading}
             className="w-full py-3 rounded-xl bg-card border border-border text-foreground font-semibold text-sm flex items-center justify-center gap-3 hover:bg-secondary transition-colors disabled:opacity-50"
           >
             {oauthLoading === 'google' ? (
@@ -115,7 +149,7 @@ const Auth = () => {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => handleOAuth('apple')}
-            disabled={!!oauthLoading}
+            disabled={!!oauthLoading || authLoading}
             className="w-full py-3 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center justify-center gap-3 hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {oauthLoading === 'apple' ? (
@@ -195,7 +229,7 @@ const Auth = () => {
 
           <motion.button
             type="submit"
-            disabled={loading}
+            disabled={loading || authLoading}
             whileTap={{ scale: 0.97 }}
             className="w-full py-3 rounded-xl gradient-primary text-primary-foreground font-bold text-sm glow-primary flex items-center justify-center gap-2 disabled:opacity-50"
           >
