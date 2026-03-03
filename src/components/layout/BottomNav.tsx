@@ -3,7 +3,7 @@ import { LayoutDashboard, Package, Receipt, BarChart3, Settings, ScanLine } from
 import { motion } from 'framer-motion';
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/products', icon: Package, label: 'Manage' },
   { path: '/billing', icon: Receipt, label: 'Billing' },
   { path: '/reports', icon: BarChart3, label: 'Reports' },
@@ -16,7 +16,6 @@ const BottomNav = () => {
 
   return (
     <>
-      {/* Floating Scan Button */}
       <motion.button
         whileTap={{ scale: 0.9 }}
         whileHover={{ scale: 1.05 }}
@@ -26,7 +25,6 @@ const BottomNav = () => {
         <ScanLine className="w-6 h-6 text-primary-foreground" />
       </motion.button>
 
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 glass-card border-t border-border/50 safe-bottom lg:hidden">
         <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item) => {
@@ -46,16 +44,8 @@ const BottomNav = () => {
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 )}
-                <Icon
-                  className={`w-5 h-5 transition-colors ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                />
-                <span
-                  className={`text-[10px] font-medium transition-colors ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
+                <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                <span className={`text-[10px] font-medium transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
                   {item.label}
                 </span>
               </motion.button>
@@ -64,7 +54,6 @@ const BottomNav = () => {
         </div>
       </nav>
 
-      {/* Desktop Sidebar */}
       <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 flex-col items-center py-6 gap-2 glass-card border-r border-border/50 z-40">
         <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center mb-6">
           <Receipt className="w-5 h-5 text-primary-foreground" />
@@ -79,9 +68,7 @@ const BottomNav = () => {
               whileHover={{ scale: 1.05 }}
               onClick={() => navigate(item.path)}
               className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl transition-colors w-16 ${
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               <Icon className="w-5 h-5" />
