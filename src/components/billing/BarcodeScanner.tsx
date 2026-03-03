@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Camera } from 'lucide-react';
+import { X, Camera, RefreshCcw } from 'lucide-react';
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -9,32 +9,77 @@ interface BarcodeScannerProps {
   onScan: (code: string) => void;
 }
 
+const SCANNER_ID = 'barcode-reader';
+
 const BarcodeScanner = ({ open, onClose, onScan }: BarcodeScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const startedRef = useRef(false);
   const [error, setError] = useState('');
+  const [booting, setBooting] = useState(false);
+
+  const stopScanner = async () => {
+    if (!scannerRef.current) return;
+    if (!startedRef.current) return;
+
+    try {
+      await scannerRef.current.stop();
+      await scannerRef.current.clear();
+    } catch {
+      // ignore stop errors
+    } finally {
+      startedRef.current = false;
+    }
+  };
+
+  const startScanner = async () => {
+    setError('');
+    setBooting(true);
+
+    try {
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode(SCANNER_ID);
+      }
+
+      const cameras = await Html5Qrcode.getCameras();
+      if (!cameras?.length) {
+        setError('Camera not found. Please check device camera permissions.');
+        return;
+      }
+
+      const rearCamera = cameras.find((cam) => /back|rear|environment/i.test(cam.label));
+      const selectedCameraId = rearCamera?.id ?? cameras[0].id;
+
+      await scannerRef.current.start(
+        selectedCameraId,
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        async (decodedText) => {
+          onScan(decodedText);
+          await stopScanner();
+          onClose();
+        },
+        () => {}
+      );
+
+      startedRef.current = true;
+    } catch (err: any) {
+      const message = String(err?.message ?? '');
+      if (message.toLowerCase().includes('permission') || message.toLowerCase().includes('notallowederror')) {
+        setError('Camera permission denied. Browser settings me camera allow karke Retry karein.');
+      } else {
+        setError('Scanner start nahi ho paya. Please Retry once.');
+      }
+      console.error('Scanner error:', err);
+    } finally {
+      setBooting(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
-
-    const scanner = new Html5Qrcode('barcode-reader');
-    scannerRef.current = scanner;
-
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 150 } },
-      (decodedText) => {
-        onScan(decodedText);
-        scanner.stop().catch(() => {});
-        onClose();
-      },
-      () => {}
-    ).catch((err) => {
-      setError('Camera access denied. Please allow camera permission.');
-      console.error('Scanner error:', err);
-    });
+    void startScanner();
 
     return () => {
-      scanner.stop().catch(() => {});
+      void stopScanner();
     };
   }, [open]);
 
@@ -62,16 +107,24 @@ const BarcodeScanner = ({ open, onClose, onScan }: BarcodeScannerProps) => {
           </div>
 
           <div className="flex-1 flex items-center justify-center px-4">
-            <div className="w-full max-w-sm">
-              <div
-                id="barcode-reader"
-                className="rounded-2xl overflow-hidden border-2 border-primary/30"
-              />
+            <div className="w-full max-w-sm space-y-3">
+              <div id={SCANNER_ID} className="rounded-2xl overflow-hidden border-2 border-primary/30 min-h-[280px]" />
+
               {error && (
-                <p className="text-sm text-destructive text-center mt-4">{error}</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-destructive text-center">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => void startScanner()}
+                    className="w-full py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center justify-center gap-2"
+                  >
+                    <RefreshCcw className="w-3.5 h-3.5" /> Retry Scanner
+                  </button>
+                </div>
               )}
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                Point camera at a barcode to scan
+
+              <p className="text-xs text-muted-foreground text-center">
+                {booting ? 'Starting camera...' : 'Point camera at product barcode'}
               </p>
             </div>
           </div>
