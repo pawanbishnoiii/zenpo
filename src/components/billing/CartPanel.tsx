@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, CreditCard, Banknote, Smartphone, Printer, FileText, Loader2 } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2 } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,7 @@ const CartPanel = () => {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [showInvoice, setShowInvoice] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -31,7 +32,7 @@ const CartPanel = () => {
 
   const paymentMethods = [
     { id: 'cash', label: 'Cash', icon: Banknote },
-    { id: 'card', label: 'Card', icon: CreditCard },
+    { id: 'cod', label: 'COD', icon: FileText },
     { id: 'upi', label: 'UPI', icon: Smartphone },
   ];
 
@@ -45,27 +46,47 @@ const CartPanel = () => {
       toast({ title: 'Error', description: 'Please set up your business first', variant: 'destructive' });
       return;
     }
+
     setSaving(true);
     const invNum = generateInvoiceNumber();
     setInvoiceNumber(invNum);
 
     try {
-      // Create invoice
-      const { data: invoice, error: invError } = await supabase.from('invoices').insert({
-        business_id: business.id,
-        invoice_number: invNum,
-        customer_name: customerName || null,
-        customer_phone: customerPhone || null,
-        subtotal,
-        discount_total: cart.reduce((s, i) => s + (i.product.price - i.product.discountPrice) * i.quantity, 0),
-        tax_total: taxTotal,
-        grand_total: grandTotal,
-        payment_method: paymentMethod,
-      }).select().single();
+      let customerId: string | null = null;
+      const hasCustomerDetails = [customerName, customerPhone, customerEmail, vehicleNumber].some((value) => value.trim().length > 0);
+
+      if (hasCustomerDetails) {
+        const { data: upsertedCustomerId, error: customerError } = await supabase.rpc('upsert_customer_for_invoice', {
+          _business_id: business.id,
+          _full_name: customerName,
+          _phone: customerPhone,
+          _email: customerEmail,
+          _vehicle_number: vehicleNumber,
+        });
+
+        if (customerError) throw customerError;
+        customerId = upsertedCustomerId as string;
+      }
+
+      const { data: invoice, error: invError } = await supabase
+        .from('invoices')
+        .insert({
+          business_id: business.id,
+          invoice_number: invNum,
+          customer_id: customerId,
+          customer_name: customerName || null,
+          customer_phone: customerPhone || null,
+          subtotal,
+          discount_total: cart.reduce((s, i) => s + (i.product.price - i.product.discountPrice) * i.quantity, 0),
+          tax_total: taxTotal,
+          grand_total: grandTotal,
+          payment_method: paymentMethod,
+        })
+        .select()
+        .single();
 
       if (invError) throw invError;
 
-      // Create invoice items
       const items = cart.map((item) => ({
         invoice_id: invoice.id,
         product_id: item.product.id,
@@ -74,14 +95,34 @@ const CartPanel = () => {
         price: item.product.discountPrice,
         total: item.product.discountPrice * item.quantity,
       }));
+
       const { error: itemsError } = await supabase.from('invoice_items').insert(items);
       if (itemsError) throw itemsError;
 
-      // Reduce stock
       for (const item of cart) {
-        await supabase.from('products').update({
-          stock: Math.max(0, item.product.stock - item.quantity)
-        }).eq('id', item.product.id);
+        await supabase
+          .from('products')
+          .update({ stock: Math.max(0, item.product.stock - item.quantity) })
+          .eq('id', item.product.id);
+      }
+
+      if (customerId) {
+        const { data: customerStats } = await supabase
+          .from('customers')
+          .select('visit_count,total_spent')
+          .eq('id', customerId)
+          .maybeSingle();
+
+        if (customerStats) {
+          await supabase
+            .from('customers')
+            .update({
+              visit_count: Number(customerStats.visit_count || 0) + 1,
+              total_spent: Number(customerStats.total_spent || 0) + grandTotal,
+              last_visit_at: new Date().toISOString(),
+            })
+            .eq('id', customerId);
+        }
       }
 
       setShowInvoice(true);
@@ -141,6 +182,7 @@ const CartPanel = () => {
     setShowInvoice(false);
     setCustomerName('');
     setCustomerPhone('');
+    setVehicleNumber('');
     setCustomerEmail('');
     clearCart();
   };
@@ -302,13 +344,20 @@ const CartPanel = () => {
                   className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <input
-                  type="email"
-                  placeholder="Email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  type="text"
+                  placeholder="Vehicle Number"
+                  value={vehicleNumber}
+                  onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
                   className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
             </div>
           </>
         )}

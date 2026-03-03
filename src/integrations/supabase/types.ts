@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_offers: {
+        Row: {
+          business_id: string
+          created_at: string
+          description: string | null
+          discount_percent: number
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          description?: string | null
+          discount_percent?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          discount_percent?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       businesses: {
         Row: {
           address: string | null
@@ -56,6 +95,51 @@ export type Database = {
           printer_type?: string | null
           theme?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          business_id: string
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          last_visit_at: string | null
+          notes: string | null
+          phone: string | null
+          total_spent: number
+          updated_at: string
+          vehicle_number: string | null
+          visit_count: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          last_visit_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          total_spent?: number
+          updated_at?: string
+          vehicle_number?: string | null
+          visit_count?: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          last_visit_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          total_spent?: number
+          updated_at?: string
+          vehicle_number?: string | null
+          visit_count?: number
         }
         Relationships: []
       }
@@ -108,6 +192,7 @@ export type Database = {
         Row: {
           business_id: string
           created_at: string
+          customer_id: string | null
           customer_name: string | null
           customer_phone: string | null
           discount_total: number
@@ -121,6 +206,7 @@ export type Database = {
         Insert: {
           business_id: string
           created_at?: string
+          customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           discount_total?: number
@@ -134,6 +220,7 @@ export type Database = {
         Update: {
           business_id?: string
           created_at?: string
+          customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           discount_total?: number
@@ -150,6 +237,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -317,6 +411,20 @@ export type Database = {
       is_business_owner: {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
+      }
+      seed_business_starter_catalog: {
+        Args: { _business_id: string }
+        Returns: number
+      }
+      upsert_customer_for_invoice: {
+        Args: {
+          _business_id: string
+          _email: string
+          _full_name: string
+          _phone: string
+          _vehicle_number?: string
+        }
+        Returns: string
       }
     }
     Enums: {
