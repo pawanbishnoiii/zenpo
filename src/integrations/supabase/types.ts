@@ -65,6 +65,7 @@ export type Database = {
           owner_id: string
           phone: string | null
           printer_type: string | null
+          store_slug: string | null
           theme: string | null
           updated_at: string
         }
@@ -79,6 +80,7 @@ export type Database = {
           owner_id: string
           phone?: string | null
           printer_type?: string | null
+          store_slug?: string | null
           theme?: string | null
           updated_at?: string
         }
@@ -93,6 +95,7 @@ export type Database = {
           owner_id?: string
           phone?: string | null
           printer_type?: string | null
+          store_slug?: string | null
           theme?: string | null
           updated_at?: string
         }
@@ -140,6 +143,48 @@ export type Database = {
           updated_at?: string
           vehicle_number?: string | null
           visit_count?: number
+        }
+        Relationships: []
+      }
+      gallery_products: {
+        Row: {
+          barcode_value: string | null
+          category: string
+          created_at: string
+          description: string | null
+          discount_price: number
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          sku: string
+          tax_percent: number
+        }
+        Insert: {
+          barcode_value?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          discount_price?: number
+          id?: string
+          image_url?: string | null
+          name: string
+          price?: number
+          sku: string
+          tax_percent?: number
+        }
+        Update: {
+          barcode_value?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          discount_price?: number
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          sku?: string
+          tax_percent?: number
         }
         Relationships: []
       }
