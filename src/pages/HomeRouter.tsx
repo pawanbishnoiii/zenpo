@@ -15,9 +15,8 @@ const HomeRouter = () => {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/landing" replace />;
   if (!business) return <Navigate to="/onboarding" replace />;
-
   return <Navigate to="/dashboard" replace />;
 };
 
