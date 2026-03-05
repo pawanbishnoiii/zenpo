@@ -35,7 +35,6 @@ const Onboarding = () => {
   }, [step, name]);
 
   // Check slug availability
-  // Check slug availability
   useEffect(() => {
     if (step !== 2 || !slug.trim()) { setSlugAvailable(null); return; }
     const timer = setTimeout(async () => {
