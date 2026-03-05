@@ -1,21 +1,26 @@
 import { motion } from 'framer-motion';
-import { Search, Plus, Barcode, Database, Loader2, SlidersHorizontal, Pencil, Trash2, Download, Package, Image } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Search, Plus, Barcode, Database, Loader2, SlidersHorizontal, Pencil, Trash2, Download, Package, ScanLine, ImagePlus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import ProductFormDialog from '@/components/products/ProductFormDialog';
 import ProductEditDialog from '@/components/products/ProductEditDialog';
 import BarcodeLabel from '@/components/products/BarcodeLabel';
 import GalleryPickerDialog from '@/components/products/GalleryPickerDialog';
+import BarcodeScanner from '@/components/billing/BarcodeScanner';
 import PageHeader from '@/components/layout/PageHeader';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/store/useAppStore';
 import { useToast } from '@/hooks/use-toast';
 
+const generateSKU = () => `SKU-${Date.now().toString(36).toUpperCase()}`;
+const generateBarcode = () => `${Math.floor(8900000000000 + Math.random() * 99999999999)}`;
+
 const Workspace = () => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [showForm, setShowForm] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [selectedBarcode, setSelectedBarcode] = useState<any>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -55,6 +60,24 @@ const Workspace = () => {
     setSeeding(false);
   };
 
+  // Barcode scan to add new product
+  const handleBarcodeScan = (code: string) => {
+    const existing = products.find(p => p.barcode === code);
+    if (existing) {
+      toast({ title: 'Product exists', description: `${existing.name} already has this barcode.` });
+      setEditProduct(existing);
+    } else {
+      // Open form with pre-filled barcode
+      toast({ title: 'New barcode scanned', description: `Barcode: ${code}. Fill in product details.` });
+      setShowScanner(false);
+      setShowForm(true);
+      // We'll pass the scanned barcode via a ref or state
+      setScannedBarcode(code);
+    }
+  };
+
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+
   useEffect(() => { void fetchProducts(); }, [business?.id]);
 
   const allCategories = ['All', ...new Set(products.map((p) => p.category))];
@@ -74,15 +97,15 @@ const Workspace = () => {
     <div className="px-4 pt-4 lg:pl-24 max-w-5xl mx-auto space-y-4 pb-24">
       <PageHeader title="Workspace" backTo="/dashboard" actions={
         <div className="flex items-center gap-2">
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAdvancedMode(v => !v)}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${advancedMode ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
-            <SlidersHorizontal className="w-3.5 h-3.5" /> Advanced
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowScanner(true)}
+            className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5">
+            <ScanLine className="w-3.5 h-3.5" /> Scan
           </motion.button>
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowGallery(true)}
             className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5">
             <Download className="w-3.5 h-3.5" /> Gallery
           </motion.button>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowForm(true)}
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setScannedBarcode(null); setShowForm(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold shadow-soft">
             <Plus className="w-4 h-4" /> Add
           </motion.button>
@@ -106,7 +129,7 @@ const Workspace = () => {
 
       {advancedMode && (
         <div className="rounded-2xl glass-card p-3 border border-border/60 flex items-center justify-between gap-2">
-          <div><p className="text-sm font-semibold text-foreground">Starter Catalog</p><p className="text-xs text-muted-foreground">Pre-built items auto add</p></div>
+          <div><p className="text-sm font-semibold text-foreground">Starter Catalog</p><p className="text-xs text-muted-foreground">Add pre-built items for your business type</p></div>
           <button onClick={() => void handleSeedCatalog()} disabled={seeding}
             className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
             {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />} Seed
@@ -114,8 +137,14 @@ const Workspace = () => {
         </div>
       )}
 
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span>{products.length} items</span><span>•</span><span>{products.filter(p => p.stock < 20).length} low stock</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>{products.length} items</span><span>•</span><span>{products.filter(p => p.stock < 20).length} low stock</span>
+        </div>
+        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAdvancedMode(v => !v)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${advancedMode ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
+          <SlidersHorizontal className="w-3.5 h-3.5" /> Advanced
+        </motion.button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -155,15 +184,17 @@ const Workspace = () => {
         })}
         {filteredProducts.length === 0 && (
           <div className="col-span-full py-12 text-center">
-            <p className="text-sm text-muted-foreground">{products.length === 0 ? 'No items yet. Add product or pick from Gallery.' : 'No matching items found'}</p>
+            <Package className="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
+            <p className="text-sm text-muted-foreground">{products.length === 0 ? 'No items yet. Add a product or pick from Gallery.' : 'No matching items found'}</p>
           </div>
         )}
       </div>
 
-      <ProductFormDialog open={showForm} onClose={() => setShowForm(false)} onCreated={fetchProducts} businessId={business?.id} businessName={business?.business_name} />
+      <ProductFormDialog open={showForm} onClose={() => { setShowForm(false); setScannedBarcode(null); }} onCreated={fetchProducts} businessId={business?.id} businessName={business?.business_name} initialBarcode={scannedBarcode} />
       <GalleryPickerDialog open={showGallery} onClose={() => setShowGallery(false)} businessId={business?.id} onAdded={fetchProducts} />
       {editProduct && <ProductEditDialog open={!!editProduct} onClose={() => setEditProduct(null)} product={editProduct} onUpdated={fetchProducts} />}
       {selectedBarcode && <BarcodeLabel open={!!selectedBarcode} onClose={() => setSelectedBarcode(null)} productName={selectedBarcode.name} barcode={selectedBarcode.barcode} price={selectedBarcode.discountPrice} sku={selectedBarcode.sku} businessName={business?.business_name} />}
+      <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={handleBarcodeScan} />
     </div>
   );
 };

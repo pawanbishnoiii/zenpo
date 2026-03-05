@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, Search, UserCheck } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +35,6 @@ const CartPanel = () => {
     { id: 'upi', label: 'UPI', icon: Smartphone },
   ];
 
-  // Customer auto-suggest
   useEffect(() => {
     if (!business || customerPhone.length < 3) { setSuggestions([]); return; }
     const timer = setTimeout(async () => {
@@ -130,6 +129,14 @@ const CartPanel = () => {
     catch (err: any) { toast({ title: 'Print Error', description: err.message, variant: 'destructive' }); }
   };
 
+  const handleShareWhatsApp = () => {
+    const itemsList = cart.map(i => `• ${i.product.name} x${i.quantity} = ₹${(i.product.discountPrice * i.quantity).toFixed(0)}`).join('\n');
+    const storeUrl = business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : '';
+    const message = `*Invoice: ${invoiceNumber}*\n${business?.business_name || 'ZEN POS'}\n\n${itemsList}\n\nSubtotal: ₹${subtotal.toFixed(0)}\nTax: ₹${taxTotal.toFixed(0)}\n*Total: ₹${grandTotal.toFixed(0)}*\nPayment: ${paymentMethod.toUpperCase()}\n${storeUrl ? `\nVisit our store: ${storeUrl}` : ''}\n\nThank you!`;
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
   const handleDone = () => { setShowInvoice(false); setCustomerName(''); setCustomerPhone(''); setVehicleNumber(''); setCustomerEmail(''); clearCart(); };
 
   if (showInvoice) {
@@ -147,15 +154,22 @@ const CartPanel = () => {
             paymentMethod={paymentMethod} invoiceNumber={invoiceNumber} businessName={business?.business_name || 'ZEN POS'}
             businessAddress={business?.address} businessPhone={business?.phone} businessGst={business?.gst_number}
             subtotal={subtotal} taxTotal={taxTotal} grandTotal={grandTotal}
-            storeUrl={(business as any)?.store_slug ? `${window.location.origin}/store/${(business as any).store_slug}` : undefined} />
+            storeUrl={business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : undefined} />
         </div>
         <div className="border-t border-border p-4 space-y-2">
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.95 }} onClick={handlePrint} disabled={!printer.connected}
               className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40">
-              <Printer className="w-4 h-4" />Print</motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={handleDone} className="flex-[2] py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary">Done — New Bill</motion.button>
+              <Printer className="w-4 h-4" /> Print
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={handleShareWhatsApp}
+              className="flex-1 py-3 rounded-xl bg-success/10 text-success text-sm font-semibold flex items-center justify-center gap-2">
+              <Share2 className="w-4 h-4" /> WhatsApp
+            </motion.button>
           </div>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleDone} className="w-full py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary">
+            Done — New Bill
+          </motion.button>
         </div>
       </div>
     );
@@ -202,7 +216,7 @@ const CartPanel = () => {
             <div className="space-y-2 pt-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer (Optional)</p>
               <div className="relative">
-                <input type="text" placeholder="Name or Phone to search..." value={customerPhone || customerName}
+                <input type="text" placeholder="Search by name or phone..." value={customerPhone || customerName}
                   onChange={e => { const v = e.target.value; if (/^\d/.test(v)) setCustomerPhone(v); else { setCustomerName(v); setCustomerPhone(''); } }}
                   className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 {showSuggestions && suggestions.length > 0 && (

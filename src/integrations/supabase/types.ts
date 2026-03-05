@@ -446,6 +446,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_slug_available: { Args: { _slug: string }; Returns: boolean }
+      get_store_by_slug: { Args: { _slug: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

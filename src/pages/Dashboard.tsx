@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
-  const { business, loading: bizLoading } = useBusiness();
+  const { business } = useBusiness();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ todaySales: 0, monthlySales: 0, totalProducts: 0, lowStock: 0, totalCustomers: 0 });
   const [revenueData, setRevenueData] = useState<any[]>([]);
@@ -35,7 +35,6 @@ const Dashboard = () => {
 
       setStats({ todaySales, monthlySales, totalProducts: prods.data?.length || 0, lowStock, totalCustomers: custs.count || 0 });
 
-      // Weekly revenue
       const weekData = [];
       for (let i = 6; i >= 0; i--) {
         const d = dayjs().subtract(i, 'day');

@@ -12,20 +12,26 @@ const StorePage = () => {
 
   useEffect(() => {
     if (!slug) return;
-    const fetch = async () => {
-      const { data: biz } = await supabase.from('businesses').select('*').eq('store_slug', slug).maybeSingle();
-      if (biz) {
-        setBusiness(biz);
-        const { data: prods } = await supabase.from('products').select('*').eq('business_id', biz.id).order('name');
-        setProducts(prods || []);
+    const fetchStore = async () => {
+      const { data, error } = await supabase.rpc('get_store_by_slug', { _slug: slug });
+      if (data && !error) {
+        const result = data as any;
+        setBusiness(result.business);
+        setProducts(result.products || []);
       }
       setLoading(false);
     };
-    fetch();
+    fetchStore();
   }, [slug]);
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  if (!business) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Store not found</p></div>;
+  if (!business) return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2">
+      <Store className="w-10 h-10 text-muted-foreground/30" />
+      <p className="text-muted-foreground">Store not found</p>
+      <p className="text-xs text-muted-foreground">This store link may not exist or has been changed.</p>
+    </div>
+  );
 
   const getImageSrc = (url: string) => {
     if (!url) return '';
@@ -44,7 +50,7 @@ const StorePage = () => {
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {products.map(p => {
+          {products.map((p: any) => {
             const imgSrc = getImageSrc(p.image_url || '');
             return (
               <motion.div key={p.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl glass-card shadow-soft overflow-hidden">
