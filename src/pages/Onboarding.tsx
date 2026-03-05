@@ -27,8 +27,6 @@ const Onboarding = () => {
   const [printerType, setPrinterType] = useState('58mm');
   const [saving, setSaving] = useState(false);
 
-  if (!loading && business) return <Navigate to="/dashboard" replace />;
-
   // Auto-generate slug from name
   useEffect(() => {
     if (step === 2 && name.trim() && !slug) {
@@ -36,6 +34,7 @@ const Onboarding = () => {
     }
   }, [step, name]);
 
+  // Check slug availability
   // Check slug availability
   useEffect(() => {
     if (step !== 2 || !slug.trim()) { setSlugAvailable(null); return; }

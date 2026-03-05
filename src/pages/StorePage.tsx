@@ -15,8 +15,9 @@ const StorePage = () => {
     const fetchStore = async () => {
       const { data, error } = await supabase.rpc('get_store_by_slug', { _slug: slug });
       if (data && !error) {
-        setBusiness(data.business);
-        setProducts(data.products || []);
+        const result = data as any;
+        setBusiness(result.business);
+        setProducts(result.products || []);
       }
       setLoading(false);
     };
