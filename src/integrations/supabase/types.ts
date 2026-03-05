@@ -17,6 +17,7 @@ export type Database = {
       business_offers: {
         Row: {
           business_id: string
+          coupon_code: string | null
           created_at: string
           description: string | null
           discount_percent: number
@@ -29,6 +30,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          coupon_code?: string | null
           created_at?: string
           description?: string | null
           discount_percent?: number
@@ -41,6 +43,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          coupon_code?: string | null
           created_at?: string
           description?: string | null
           discount_percent?: number
@@ -114,6 +117,7 @@ export type Database = {
           total_spent: number
           updated_at: string
           vehicle_number: string | null
+          vehicle_type: string | null
           visit_count: number
         }
         Insert: {
@@ -128,6 +132,7 @@ export type Database = {
           total_spent?: number
           updated_at?: string
           vehicle_number?: string | null
+          vehicle_type?: string | null
           visit_count?: number
         }
         Update: {
@@ -142,6 +147,7 @@ export type Database = {
           total_spent?: number
           updated_at?: string
           vehicle_number?: string | null
+          vehicle_type?: string | null
           visit_count?: number
         }
         Relationships: []
@@ -149,6 +155,7 @@ export type Database = {
       gallery_products: {
         Row: {
           barcode_value: string | null
+          brand_name: string | null
           category: string
           created_at: string
           description: string | null
@@ -162,6 +169,7 @@ export type Database = {
         }
         Insert: {
           barcode_value?: string | null
+          brand_name?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -175,6 +183,7 @@ export type Database = {
         }
         Update: {
           barcode_value?: string | null
+          brand_name?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -337,6 +346,7 @@ export type Database = {
       products: {
         Row: {
           barcode_value: string | null
+          brand_name: string | null
           business_id: string
           category: string
           created_at: string
@@ -354,6 +364,7 @@ export type Database = {
         }
         Insert: {
           barcode_value?: string | null
+          brand_name?: string | null
           business_id: string
           category?: string
           created_at?: string
@@ -371,6 +382,7 @@ export type Database = {
         }
         Update: {
           barcode_value?: string | null
+          brand_name?: string | null
           business_id?: string
           category?: string
           created_at?: string
