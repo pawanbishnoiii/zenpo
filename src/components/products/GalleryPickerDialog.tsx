@@ -30,6 +30,12 @@ const GalleryPickerDialog = ({ open, onClose, businessId, onAdded }: GalleryPick
     });
   }, [open]);
 
+  const getImageSrc = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return supabase.storage.from('product-images').getPublicUrl(url).data.publicUrl;
+  };
+
   const handleAdd = async (item: any) => {
     if (!businessId) return;
     setAdding(item.id);
@@ -86,21 +92,24 @@ const GalleryPickerDialog = ({ open, onClose, businessId, onAdded }: GalleryPick
                   <Package className="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
                   <p className="text-sm text-muted-foreground">{items.length === 0 ? 'Gallery is empty. Admin will add products here.' : 'No matching products.'}</p>
                 </div>
-              ) : filtered.map(item => (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl glass-card">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Package className="w-5 h-5 text-primary" />
+              ) : filtered.map(item => {
+                const imgSrc = getImageSrc(item.image_url || '');
+                return (
+                  <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl glass-card">
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                      {imgSrc ? <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-primary" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate text-foreground">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.category} • ₹{item.discount_price || item.price}</p>
+                    </div>
+                    <motion.button whileTap={{ scale: 0.85 }} onClick={() => handleAdd(item)} disabled={adding === item.id}
+                      className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-soft disabled:opacity-50">
+                      {adding === item.id ? <Loader2 className="w-4 h-4 animate-spin text-primary-foreground" /> : <Plus className="w-4 h-4 text-primary-foreground" />}
+                    </motion.button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.category} • ₹{item.discount_price || item.price}</p>
-                  </div>
-                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => handleAdd(item)} disabled={adding === item.id}
-                    className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-soft disabled:opacity-50">
-                    {adding === item.id ? <Loader2 className="w-4 h-4 animate-spin text-primary-foreground" /> : <Plus className="w-4 h-4 text-primary-foreground" />}
-                  </motion.button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         </motion.div>

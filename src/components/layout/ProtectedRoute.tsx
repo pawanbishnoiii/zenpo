@@ -13,7 +13,8 @@ const ProtectedRoute = ({ children, adminOnly, requireBusiness }: ProtectedRoute
   const { user, loading, isAdmin } = useAuth();
   const { business, loading: businessLoading } = useBusiness();
 
-  if (loading || (requireBusiness && businessLoading)) {
+  // Always wait for auth to load
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -22,8 +23,24 @@ const ProtectedRoute = ({ children, adminOnly, requireBusiness }: ProtectedRoute
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
-  if (requireBusiness && !business) return <Navigate to="/onboarding" replace />;
+
+  // Admin routes don't require business
+  if (adminOnly) {
+    if (!isAdmin) return <Navigate to="/dashboard" replace />;
+    return <>{children}</>;
+  }
+
+  // Business-required routes
+  if (requireBusiness) {
+    if (businessLoading) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+    if (!business) return <Navigate to="/onboarding" replace />;
+  }
 
   return <>{children}</>;
 };
