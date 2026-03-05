@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Search, Plus, Barcode, Database, Loader2, SlidersHorizontal, Pencil, Trash2, Download, Package, ScanLine, ImagePlus } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Barcode, Database, Loader2, SlidersHorizontal, Pencil, Trash2, Download, Package, ScanLine, ImagePlus, Share2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import ProductFormDialog from '@/components/products/ProductFormDialog';
 import ProductEditDialog from '@/components/products/ProductEditDialog';
 import BarcodeLabel from '@/components/products/BarcodeLabel';
@@ -11,9 +11,6 @@ import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/store/useAppStore';
 import { useToast } from '@/hooks/use-toast';
-
-const generateSKU = () => `SKU-${Date.now().toString(36).toUpperCase()}`;
-const generateBarcode = () => `${Math.floor(8900000000000 + Math.random() * 99999999999)}`;
 
 const Workspace = () => {
   const [search, setSearch] = useState('');
@@ -26,20 +23,20 @@ const Workspace = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const { business } = useBusiness();
   const { toast } = useToast();
 
   const fetchProducts = async () => {
     if (!business) return;
-    const { data, error } = await supabase
-      .from('products').select('*').eq('business_id', business.id).order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('products').select('*').eq('business_id', business.id).order('created_at', { ascending: false });
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     if (data) {
       setProducts(data.map((p: any) => ({
         id: p.id, name: p.name, description: p.description || '', category: p.category,
         sku: p.sku, barcode: p.barcode_value || '', price: Number(p.price),
         discountPrice: Number(p.discount_price), taxPercent: Number(p.tax_percent),
-        stock: p.stock, imageUrl: p.image_url || '',
+        stock: p.stock, imageUrl: p.image_url || '', brandName: p.brand_name || '',
       })));
     }
   };
@@ -47,41 +44,42 @@ const Workspace = () => {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Deleted' });
-    setProducts(prev => prev.filter(p => p.id !== id));
+    toast({ title: 'Deleted' }); setProducts(prev => prev.filter(p => p.id !== id));
   };
 
   const handleSeedCatalog = async () => {
     if (!business?.id) return;
     setSeeding(true);
     const { data, error } = await supabase.rpc('seed_business_starter_catalog', { _business_id: business.id });
-    if (error) toast({ title: 'Seed failed', description: error.message, variant: 'destructive' });
-    else { toast({ title: 'Starter items added', description: `${Number(data || 0)} new items inserted.` }); await fetchProducts(); }
+    if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Starter items added', description: `${Number(data || 0)} new items.` }); await fetchProducts(); }
     setSeeding(false);
   };
 
-  // Barcode scan to add new product
   const handleBarcodeScan = (code: string) => {
     const existing = products.find(p => p.barcode === code);
     if (existing) {
-      toast({ title: 'Product exists', description: `${existing.name} already has this barcode.` });
+      toast({ title: 'Product found', description: `${existing.name} has this barcode.` });
       setEditProduct(existing);
     } else {
-      // Open form with pre-filled barcode
-      toast({ title: 'New barcode scanned', description: `Barcode: ${code}. Fill in product details.` });
+      toast({ title: 'New barcode scanned', description: `Barcode: ${code}. Fill product details.` });
       setShowScanner(false);
-      setShowForm(true);
-      // We'll pass the scanned barcode via a ref or state
       setScannedBarcode(code);
+      setShowForm(true);
     }
   };
 
-  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+  const handleShareStore = () => {
+    if (!business?.store_slug) { toast({ title: 'No store link', description: 'Set up your store link in Settings.', variant: 'destructive' }); return; }
+    const url = `${window.location.origin}/store/${business.store_slug}`;
+    if (navigator.share) navigator.share({ title: business.business_name, url });
+    else { navigator.clipboard.writeText(url); toast({ title: 'Link copied!' }); }
+  };
 
   useEffect(() => { void fetchProducts(); }, [business?.id]);
 
-  const allCategories = ['All', ...new Set(products.map((p) => p.category))];
-  const filteredProducts = products.filter((p) => {
+  const allCategories = ['All', ...new Set(products.map(p => p.category))];
+  const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search) || p.sku.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
     return matchesSearch && matchesCategory;
@@ -114,12 +112,12 @@ const Workspace = () => {
 
       <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input type="text" placeholder="Search by name, SKU, or barcode..." value={search} onChange={(e) => setSearch(e.target.value)}
+        <input type="text" placeholder="Search by name, SKU, or barcode..." value={search} onChange={e => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
       </motion.div>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
-        {allCategories.map((cat) => (
+        {allCategories.map(cat => (
           <motion.button key={cat} whileTap={{ scale: 0.95 }} onClick={() => setActiveCategory(cat)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
             {cat}
@@ -129,7 +127,7 @@ const Workspace = () => {
 
       {advancedMode && (
         <div className="rounded-2xl glass-card p-3 border border-border/60 flex items-center justify-between gap-2">
-          <div><p className="text-sm font-semibold text-foreground">Starter Catalog</p><p className="text-xs text-muted-foreground">Add pre-built items for your business type</p></div>
+          <div><p className="text-sm font-semibold text-foreground">Starter Catalog</p><p className="text-xs text-muted-foreground">Add pre-built items for your type</p></div>
           <button onClick={() => void handleSeedCatalog()} disabled={seeding}
             className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
             {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />} Seed
@@ -141,14 +139,20 @@ const Workspace = () => {
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>{products.length} items</span><span>•</span><span>{products.filter(p => p.stock < 20).length} low stock</span>
         </div>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAdvancedMode(v => !v)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${advancedMode ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
-          <SlidersHorizontal className="w-3.5 h-3.5" /> Advanced
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleShareStore}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-secondary text-secondary-foreground">
+            <Share2 className="w-3.5 h-3.5" /> Share Store
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAdvancedMode(v => !v)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${advancedMode ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
+            <SlidersHorizontal className="w-3.5 h-3.5" /> Advanced
+          </motion.button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {filteredProducts.map((product) => {
+        {filteredProducts.map(product => {
           const imgSrc = getImageSrc(product.imageUrl);
           const hasDiscount = product.discountPrice < product.price;
           return (
@@ -163,7 +167,7 @@ const Workspace = () => {
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate text-foreground">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">{product.category} • SKU: {product.sku}</p>
+                    <p className="text-xs text-muted-foreground">{product.category} • {product.sku}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-foreground">₹{product.discountPrice}</p>
@@ -185,7 +189,7 @@ const Workspace = () => {
         {filteredProducts.length === 0 && (
           <div className="col-span-full py-12 text-center">
             <Package className="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground">{products.length === 0 ? 'No items yet. Add a product or pick from Gallery.' : 'No matching items found'}</p>
+            <p className="text-sm text-muted-foreground">{products.length === 0 ? 'No items yet. Add a product or pick from Gallery.' : 'No matching items'}</p>
           </div>
         )}
       </div>
