@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getCategoryName, getCategoryIcon } from '@/lib/categories';
+import { getCategoryConfig } from '@/lib/categoryConfig';
 
 const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
@@ -16,6 +16,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ todaySales: 0, monthlySales: 0, totalProducts: 0, lowStock: 0, totalCustomers: 0, totalInvoices: 0, activeOffers: 0 });
   const [revenueData, setRevenueData] = useState<any[]>([]);
+
+  const categoryConfig = business ? getCategoryConfig(business.category) : null;
+  const CategoryIcon = categoryConfig?.icon || Package;
 
   useEffect(() => {
     if (!business) return;
@@ -51,8 +54,22 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [business?.id]);
 
-  const CategoryIcon = business ? getCategoryIcon(business.category) : Package;
   const storeUrl = business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : '';
+
+  // Dynamic quick actions based on category
+  const getQuickActions = () => {
+    const base = [
+      { icon: Package, label: categoryConfig?.navLabel.workspace || 'Workspace', desc: 'Manage products', path: '/workspace' },
+      { icon: IndianRupee, label: categoryConfig?.navLabel.billing || 'New Bill', desc: 'Create invoice', path: '/billing' },
+      { icon: Receipt, label: 'History', desc: 'Past invoices', path: '/history' },
+      { icon: Users, label: categoryConfig?.navLabel.customers || 'Customers', desc: 'Customer CRM', path: '/customers' },
+      { icon: Tag, label: 'Offers', desc: 'Discounts & coupons', path: '/offers' },
+      { icon: BarChart3, label: 'Reports', desc: 'Analytics', path: '/reports' },
+      { icon: Globe, label: 'Store', desc: 'Public page', path: storeUrl ? `/store/${business?.store_slug}` : '/settings' },
+      { icon: Settings, label: 'Settings', desc: 'Configuration', path: '/settings' },
+    ];
+    return base;
+  };
 
   return (
     <div className="px-4 pt-4 lg:pl-24 max-w-5xl mx-auto space-y-5 pb-24">
@@ -67,11 +84,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {business && (
+      {categoryConfig && (
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
             <CategoryIcon className="w-3.5 h-3.5" />
-            {getCategoryName(business.category)}
+            {categoryConfig.name}
           </div>
           {storeUrl && (
             <button onClick={() => window.open(storeUrl, '_blank')} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-muted transition-colors">
@@ -84,14 +101,14 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 gap-3">
         <StatCard title="Today Sales" value={`₹${stats.todaySales.toLocaleString()}`} icon={IndianRupee} trend={stats.todaySales > 0 ? 'Live' : 'No sales'} trendUp={stats.todaySales > 0} gradient />
         <StatCard title="Monthly Sales" value={`₹${(stats.monthlySales / 1000).toFixed(1)}K`} icon={TrendingUp} trend="This month" />
-        <StatCard title="Products" value={stats.totalProducts.toString()} icon={Package} />
+        <StatCard title={categoryConfig?.navLabel.workspace === 'Services' ? 'Services' : categoryConfig?.navLabel.workspace === 'Menu' ? 'Menu Items' : 'Products'} value={stats.totalProducts.toString()} icon={Package} />
         <StatCard title="Low Stock" value={stats.lowStock.toString()} icon={AlertTriangle} trend={stats.lowStock > 0 ? 'Attention' : 'Good'} />
       </div>
 
       {/* Quick Stats Row */}
       <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4">
         {[
-          { label: 'Customers', value: stats.totalCustomers, icon: Users, color: 'text-success' },
+          { label: categoryConfig?.navLabel.customers || 'Customers', value: stats.totalCustomers, icon: Users, color: 'text-success' },
           { label: 'Invoices', value: stats.totalInvoices, icon: Receipt, color: 'text-primary' },
           { label: 'Active Offers', value: stats.activeOffers, icon: Tag, color: 'text-warning' },
         ].map(s => {
@@ -125,16 +142,7 @@ const Dashboard = () => {
       )}
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-4">
-        {[
-          { icon: Package, label: 'Workspace', desc: 'Manage products', path: '/workspace' },
-          { icon: IndianRupee, label: 'New Bill', desc: 'Create invoice', path: '/billing' },
-          { icon: Receipt, label: 'History', desc: 'Past invoices', path: '/history' },
-          { icon: Users, label: 'Customers', desc: 'Customer CRM', path: '/customers' },
-          { icon: Tag, label: 'Offers', desc: 'Discounts & coupons', path: '/offers' },
-          { icon: BarChart3, label: 'Reports', desc: 'Analytics', path: '/reports' },
-          { icon: Globe, label: 'Store', desc: 'Public page', path: storeUrl ? `/store/${business?.store_slug}` : '/settings' },
-          { icon: Settings, label: 'Settings', desc: 'Configuration', path: '/settings' },
-        ].map(item => {
+        {getQuickActions().map(item => {
           const Icon = item.icon;
           return (
             <button key={item.label} onClick={() => item.path.startsWith('/store') ? window.open(item.path, '_blank') : navigate(item.path)}

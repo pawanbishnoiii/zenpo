@@ -7,8 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import dayjs from 'dayjs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-
-const VEHICLE_TYPES = ['Car', 'Bike', 'Scooter', 'Auto', 'Truck', 'Bus', 'SUV', 'Van', 'Other'];
+import { getCategoryConfig } from '@/lib/categoryConfig';
 
 const CustomerManagement = () => {
   const { business } = useBusiness();
@@ -21,6 +20,10 @@ const CustomerManagement = () => {
   const [editForm, setEditForm] = useState({ full_name: '', phone: '', email: '', vehicle_number: '', vehicle_type: '', notes: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [sortBy, setSortBy] = useState<'recent' | 'spent' | 'visits'>('recent');
+
+  const categoryConfig = business ? getCategoryConfig(business.category) : null;
+  const showVehicleFields = categoryConfig?.billingFeatures.vehicleType ?? false;
+  const vehicleTypes = categoryConfig?.vehicleTypes || [];
 
   const fetchCustomers = async () => {
     if (!business) return;
@@ -74,7 +77,7 @@ const CustomerManagement = () => {
 
   return (
     <div className="px-4 pt-4 lg:pl-24 max-w-3xl mx-auto space-y-4 pb-24">
-      <PageHeader title="Customers" backTo="/dashboard" actions={
+      <PageHeader title={categoryConfig?.navLabel.customers || 'Customers'} backTo="/dashboard" actions={
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">{customers.length}</span>
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
@@ -110,7 +113,7 @@ const CustomerManagement = () => {
       {/* Top Customers */}
       {topCustomers.length > 0 && !loading && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Top Customers</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Top {categoryConfig?.navLabel.customers || 'Customers'}</p>
           <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
             {topCustomers.map((c, i) => (
               <div key={c.id} className="min-w-[130px] rounded-2xl glass-card shadow-soft p-3 space-y-1">
@@ -126,8 +129,8 @@ const CustomerManagement = () => {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input type="text" placeholder="Search name, phone, vehicle..." value={search} onChange={e => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+        <input type="text" placeholder={`Search ${showVehicleFields ? 'name, phone, vehicle...' : 'name, phone...'}`} value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
       </div>
 
       {/* Sort */}
@@ -155,8 +158,8 @@ const CustomerManagement = () => {
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
                     {c.phone && <span className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</span>}
                     {c.email && <span className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>}
-                    {c.vehicle_number && <span className="text-xs text-muted-foreground flex items-center gap-1"><Car className="w-3 h-3" />{c.vehicle_number}</span>}
-                    {c.vehicle_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground">{c.vehicle_type}</span>}
+                    {showVehicleFields && c.vehicle_number && <span className="text-xs text-muted-foreground flex items-center gap-1"><Car className="w-3 h-3" />{c.vehicle_number}</span>}
+                    {showVehicleFields && c.vehicle_type && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground">{c.vehicle_type}</span>}
                   </div>
                   {c.notes && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><MessageSquare className="w-3 h-3" />{c.notes}</p>}
                 </div>
@@ -179,7 +182,7 @@ const CustomerManagement = () => {
 
       <Dialog open={!!editing} onOpenChange={open => { if (!open) { setEditing(null); setShowAdd(false); } }}>
         <DialogContent className="rounded-2xl">
-          <DialogHeader><DialogTitle className="font-display">{showAdd ? 'Add Customer' : 'Edit Customer'}</DialogTitle><DialogDescription>Customer details</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">{showAdd ? 'Add' : 'Edit'} {categoryConfig?.navLabel.customers === 'Clients' ? 'Client' : categoryConfig?.navLabel.customers === 'Patients' ? 'Patient' : categoryConfig?.navLabel.customers === 'Pet Parents' ? 'Pet Parent' : 'Customer'}</DialogTitle><DialogDescription>Details</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Full Name</label>
               <input type="text" value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
@@ -188,21 +191,32 @@ const CustomerManagement = () => {
               <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
                 <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-              <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Vehicle #</label>
-                <input type="text" value={editForm.vehicle_number} onChange={e => setEditForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))}
-                  className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
                 <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-              <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Vehicle Type</label>
-                <select value={editForm.vehicle_type} onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-                  <option value="">Select...</option>
-                  {VEHICLE_TYPES.map(v => <option key={v} value={v}>{v}</option>)}
-                </select></div>
             </div>
+            {showVehicleFields && (
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Vehicle #</label>
+                  <input type="text" value={editForm.vehicle_number} onChange={e => setEditForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))}
+                    className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+                <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Vehicle Type</label>
+                  <select value={editForm.vehicle_type} onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <option value="">Select...</option>
+                    {vehicleTypes.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select></div>
+              </div>
+            )}
+            {/* Category-specific customer fields */}
+            {categoryConfig?.customerFields.filter(f => f.key !== 'vehicle_number' && f.key !== 'vehicle_type').map(field => (
+              <div key={field.key}>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{field.label}</label>
+                <input type="text" placeholder={field.placeholder || ''} value={(editForm as any)[field.key] || ''}
+                  onChange={e => setEditForm(f => ({ ...f, [field.key]: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+            ))}
             <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Notes</label>
               <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={2}
                 className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" /></div>
