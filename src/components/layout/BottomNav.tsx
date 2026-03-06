@@ -1,18 +1,22 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Receipt, BarChart3, Settings, ScanLine } from 'lucide-react';
+import { LayoutDashboard, Package, Receipt, Users, Settings, ScanLine } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const navItems = [
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { path: '/workspace', icon: Package, label: 'Workspace' },
-  { path: '/billing', icon: Receipt, label: 'Billing' },
-  { path: '/reports', icon: BarChart3, label: 'Reports' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
-];
+import { useBusiness } from '@/hooks/useBusiness';
+import { getCategoryConfig } from '@/lib/categoryConfig';
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { business } = useBusiness();
+  const config = business ? getCategoryConfig(business.category) : null;
+
+  const navItems = [
+    { path: '/dashboard', icon: LayoutDashboard, label: config?.navLabel.home || 'Home' },
+    { path: '/workspace', icon: Package, label: config?.navLabel.workspace || 'Workspace' },
+    { path: '/billing', icon: Receipt, label: config?.navLabel.billing || 'Billing' },
+    { path: '/customers', icon: Users, label: config?.navLabel.customers || 'Customers' },
+    { path: '/settings', icon: Settings, label: config?.navLabel.settings || 'Settings' },
+  ];
 
   return (
     <>

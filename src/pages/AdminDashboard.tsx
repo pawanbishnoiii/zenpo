@@ -1,15 +1,16 @@
 import { motion } from 'framer-motion';
-import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, ArrowLeft, Globe, Database } from 'lucide-react';
+import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, ArrowLeft, Globe, Database, ToggleLeft, ToggleRight, Eye, Search } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { BUSINESS_CATEGORIES } from '@/lib/categories';
+import { CATEGORY_CONFIGS, getCategoryConfig } from '@/lib/categoryConfig';
 
 const generateSKU = () => `GAL-${Date.now().toString(36).toUpperCase()}`;
 
-type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'offers';
+type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -27,6 +28,9 @@ const AdminDashboard = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [galleryCategory, setGalleryCategory] = useState('All');
   const [form, setForm] = useState({ name: '', description: '', category: 'General', brand_name: '', price: '', discount_price: '', tax_percent: '18', sku: generateSKU() });
+  const [searchUsers, setSearchUsers] = useState('');
+  const [searchBiz, setSearchBiz] = useState('');
+  const [selectedBizCategory, setSelectedBizCategory] = useState('All');
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -120,6 +124,15 @@ const AdminDashboard = () => {
   const allGalleryCategories = ['General', ...BUSINESS_CATEGORIES.flatMap(c => c.defaultCategories)];
   const uniqueGalleryCats = [...new Set(allGalleryCategories)];
 
+  const filteredProfiles = allProfiles.filter(p => (p.name || '').toLowerCase().includes(searchUsers.toLowerCase()) || (p.phone || '').includes(searchUsers));
+  const filteredBusinesses = allBusinesses.filter(b => {
+    const matchSearch = (b.business_name || '').toLowerCase().includes(searchBiz.toLowerCase());
+    const matchCat = selectedBizCategory === 'All' || b.category === selectedBizCategory;
+    return matchSearch && matchCat;
+  });
+
+  const bizCategories = ['All', ...new Set(allBusinesses.map(b => b.category))];
+
   const statCards = [
     { title: 'Users', value: stats.users, icon: Users, color: 'text-primary' },
     { title: 'Businesses', value: stats.businesses, icon: Store, color: 'text-accent' },
@@ -132,8 +145,9 @@ const AdminDashboard = () => {
   const tabs: { id: AdminTab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'gallery', label: 'Gallery', icon: Package },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'businesses', label: 'Stores', icon: Store },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'features', label: 'Features', icon: Settings },
   ];
 
   return (
@@ -145,7 +159,7 @@ const AdminDashboard = () => {
           </motion.button>
           <div>
             <h1 className="text-2xl font-bold font-display text-foreground">Admin Panel</h1>
-            <p className="text-xs text-muted-foreground">Platform management</p>
+            <p className="text-xs text-muted-foreground">Platform management • Super Admin</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10">
@@ -180,13 +194,41 @@ const AdminDashboard = () => {
               );
             })}
           </div>
+
+          {/* Category Breakdown */}
+          <div className="rounded-2xl glass-card shadow-soft p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Businesses by Category</h3>
+            <div className="space-y-2">
+              {bizCategories.filter(c => c !== 'All').map(cat => {
+                const count = allBusinesses.filter(b => b.category === cat).length;
+                const config = getCategoryConfig(cat);
+                const CatIcon = config.icon;
+                return (
+                  <div key={cat} className="flex items-center gap-3 py-1.5">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><CatIcon className="w-4 h-4 text-primary" /></div>
+                    <div className="flex-1"><p className="text-sm font-medium text-foreground">{config.name}</p></div>
+                    <span className="text-sm font-bold text-foreground">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="rounded-2xl glass-card shadow-soft p-4 space-y-2">
             <h3 className="text-sm font-semibold text-foreground">Recent Businesses</h3>
-            {allBusinesses.slice(0, 5).map(b => (
-              <div key={b.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <div><p className="text-sm font-medium text-foreground">{b.business_name}</p><p className="text-xs text-muted-foreground">{b.category} {b.store_slug ? `• /store/${b.store_slug}` : ''}</p></div>
-              </div>
-            ))}
+            {allBusinesses.slice(0, 5).map(b => {
+              const config = getCategoryConfig(b.category);
+              const CatIcon = config.icon;
+              return (
+                <div key={b.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                  <div className="flex items-center gap-2">
+                    <CatIcon className="w-4 h-4 text-muted-foreground" />
+                    <div><p className="text-sm font-medium text-foreground">{b.business_name}</p><p className="text-xs text-muted-foreground">{config.name}</p></div>
+                  </div>
+                  {b.store_slug && <button onClick={() => window.open(`/store/${b.store_slug}`, '_blank')} className="p-1.5 rounded-lg hover:bg-muted"><Eye className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -211,7 +253,7 @@ const AdminDashboard = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filteredGallery.length === 0 ? (
-              <div className="col-span-full p-8 text-center rounded-2xl glass-card"><Package className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" /><p className="text-sm text-muted-foreground">No products in gallery. Add products for store owners to quick-add.</p></div>
+              <div className="col-span-full p-8 text-center rounded-2xl glass-card"><Package className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" /><p className="text-sm text-muted-foreground">No products in gallery.</p></div>
             ) : filteredGallery.map(item => {
               const imgSrc = getImageSrc(item.image_url || '');
               return (
@@ -234,11 +276,57 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Businesses Tab */}
+      {activeTab === 'businesses' && (
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input type="text" placeholder="Search businesses..." value={searchBiz} onChange={e => setSearchBiz(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+            {bizCategories.map(cat => (
+              <button key={cat} onClick={() => setSelectedBizCategory(cat)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${selectedBizCategory === cat ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+                {cat === 'All' ? 'All' : getCategoryConfig(cat).name}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">{filteredBusinesses.length} businesses</p>
+          {filteredBusinesses.map(b => {
+            const config = getCategoryConfig(b.category);
+            const CatIcon = config.icon;
+            return (
+              <div key={b.id} className="rounded-2xl glass-card shadow-soft p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><CatIcon className="w-5 h-5 text-primary" /></div>
+                    <div><p className="text-sm font-semibold text-foreground">{b.business_name}</p><p className="text-xs text-muted-foreground">{config.name} {b.store_slug ? `• /store/${b.store_slug}` : ''}</p></div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {b.store_slug && (
+                      <button onClick={() => window.open(`/store/${b.store_slug}`, '_blank')} className="p-1.5 rounded-lg hover:bg-muted">
+                        <Globe className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Users Tab */}
       {activeTab === 'users' && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">All Users ({allProfiles.length})</p>
-          {allProfiles.map(p => (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input type="text" placeholder="Search users..." value={searchUsers} onChange={e => setSearchUsers(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <p className="text-xs text-muted-foreground">{filteredProfiles.length} users</p>
+          {filteredProfiles.map(p => (
             <div key={p.id} className="rounded-2xl glass-card shadow-soft p-4 flex items-center justify-between">
               <div><p className="text-sm font-semibold text-foreground">{p.name || 'Unnamed'}</p><p className="text-xs text-muted-foreground">{p.phone || 'No phone'}</p></div>
               <p className="text-xs text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</p>
@@ -247,22 +335,43 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Businesses Tab */}
-      {activeTab === 'businesses' && (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">All Businesses ({allBusinesses.length})</p>
-          {allBusinesses.map(b => (
-            <div key={b.id} className="rounded-2xl glass-card shadow-soft p-4">
-              <div className="flex items-center justify-between">
-                <div><p className="text-sm font-semibold text-foreground">{b.business_name}</p><p className="text-xs text-muted-foreground">{b.category} {b.store_slug ? `• /store/${b.store_slug}` : ''}</p></div>
-                {b.store_slug && (
-                  <button onClick={() => window.open(`/store/${b.store_slug}`, '_blank')} className="p-1.5 rounded-lg hover:bg-muted">
-                    <Globe className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                )}
+      {/* Features Tab - Admin Super Control */}
+      {activeTab === 'features' && (
+        <div className="space-y-4">
+          <div className="rounded-2xl glass-card shadow-soft p-4 space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">Category Feature Matrix</h3>
+            <p className="text-xs text-muted-foreground">View and manage features available to each business type.</p>
+          </div>
+          {Object.entries(CATEGORY_CONFIGS).map(([key, config]) => {
+            const CatIcon = config.icon;
+            return (
+              <div key={key} className="rounded-2xl glass-card shadow-soft p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `hsl(${config.color} / 0.1)` }}>
+                    <CatIcon className="w-5 h-5" style={{ color: `hsl(${config.color})` }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{config.name}</p>
+                    <p className="text-xs text-muted-foreground">{config.description}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {config.features.map(f => (
+                    <span key={f.id} className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${f.enabled ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                      {f.label}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(config.billingFeatures).filter(([, v]) => v).map(([k]) => (
+                    <span key={k} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      {k.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -297,14 +406,16 @@ const AdminDashboard = () => {
                 className="px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <input type="number" placeholder="Price ₹" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                className="px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-              <input type="number" placeholder="Discount ₹" value={form.discount_price} onChange={e => setForm(f => ({ ...f, discount_price: e.target.value }))}
-                className="px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <input type="number" placeholder="MRP ₹" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                className="px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <input type="number" placeholder="Selling ₹" value={form.discount_price} onChange={e => setForm(f => ({ ...f, discount_price: e.target.value }))}
+                className="px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
+            <input type="text" placeholder="SKU" value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
             <motion.button whileTap={{ scale: 0.97 }} onClick={handleSaveGallery} disabled={saving || !form.name.trim()}
-              className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {editingItem ? 'Save Changes' : 'Add to Gallery'}
+              className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {editingItem ? 'Update' : 'Add to Gallery'}
             </motion.button>
           </div>
         </DialogContent>

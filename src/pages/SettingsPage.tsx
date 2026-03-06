@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy } from 'lucide-react';
+import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy, Plus, Bluetooth, Wifi, Usb } from 'lucide-react';
 import PageHeader from '@/components/layout/PageHeader';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness } from '@/hooks/useBusiness';
@@ -9,7 +9,8 @@ import { connectPrinter } from '@/lib/ezoPrinter';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { THEME_PRESETS, type ThemePresetKey } from '@/lib/categories';
+import { DASHBOARD_THEMES, type DashboardThemeKey, PRINTER_BRANDS } from '@/lib/categoryConfig';
+import { getCategoryConfig } from '@/lib/categoryConfig';
 
 type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | null;
 
@@ -21,6 +22,8 @@ const SettingsPage = () => {
   const [activePanel, setActivePanel] = useState<SettingsPanel>(null);
   const [connecting, setConnecting] = useState(false);
 
+  const categoryConfig = business ? getCategoryConfig(business.category) : null;
+
   const [bizName, setBizName] = useState('');
   const [bizPhone, setBizPhone] = useState('');
   const [bizAddress, setBizAddress] = useState('');
@@ -30,7 +33,9 @@ const SettingsPage = () => {
   const [savingBiz, setSavingBiz] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
-  const [selectedTheme, setSelectedTheme] = useState<ThemePresetKey>('fire_orange');
+  const [selectedTheme, setSelectedTheme] = useState<DashboardThemeKey>('fire_orange');
+  const [selectedPrinterBrand, setSelectedPrinterBrand] = useState('ezo');
+  const [selectedPrinterModel, setSelectedPrinterModel] = useState('');
 
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
@@ -97,7 +102,7 @@ const SettingsPage = () => {
   };
 
   const handleApplyTheme = () => {
-    const t = THEME_PRESETS[selectedTheme];
+    const t = DASHBOARD_THEMES[selectedTheme];
     document.documentElement.style.setProperty('--primary', t.primary);
     document.documentElement.style.setProperty('--ring', t.primary);
     document.documentElement.style.setProperty('--accent', t.accent);
@@ -114,13 +119,15 @@ const SettingsPage = () => {
     else { navigator.clipboard.writeText(storeUrl); toast({ title: 'Store link copied!' }); }
   };
 
+  const currentBrand = PRINTER_BRANDS.find(b => b.id === selectedPrinterBrand);
+
   const settingsGroups = useMemo(() => {
     const groups = [
       {
         title: 'Business',
         items: [
           { key: 'business' as SettingsPanel, icon: Store, label: 'Business Profile', desc: 'Name, GST, address, store link' },
-          { key: 'printer' as SettingsPanel, icon: Printer, label: 'Printer Settings', desc: 'Ezo connection, paper size' },
+          { key: 'printer' as SettingsPanel, icon: Printer, label: 'Printer & Devices', desc: 'Printer brand, model, connection' },
           { key: 'theme' as SettingsPanel, icon: Palette, label: 'Theme', desc: 'Colors and appearance' },
         ],
       },
@@ -128,7 +135,7 @@ const SettingsPage = () => {
         title: 'Modules',
         items: [
           { nav: '/offers', icon: Tag, label: 'Offers & Coupons', desc: 'Discount campaigns' },
-          { nav: '/customers', icon: Users, label: 'Customer Manager', desc: 'CRM and analytics' },
+          { nav: '/customers', icon: Users, label: categoryConfig?.navLabel.customers || 'Customer Manager', desc: 'CRM and analytics' },
           { nav: '/history', icon: Shield, label: 'Bill History', desc: 'All past invoices' },
         ],
       },
@@ -149,13 +156,12 @@ const SettingsPage = () => {
       });
     }
     return groups;
-  }, [user?.email, isAdmin]);
+  }, [user?.email, isAdmin, categoryConfig]);
 
   return (
     <div className="px-4 pt-4 lg:pl-24 max-w-2xl mx-auto space-y-6 pb-24">
-      <PageHeader title="Settings" backTo="/dashboard" />
+      <PageHeader title={categoryConfig?.navLabel.settings || 'Settings'} backTo="/dashboard" />
 
-      {/* Store Link Quick Access */}
       {business?.store_slug && (
         <div className="rounded-2xl glass-card shadow-soft p-4 flex items-center gap-3">
           <Globe className="w-5 h-5 text-primary shrink-0" />
@@ -169,6 +175,17 @@ const SettingsPage = () => {
             <button onClick={handleShareStore} className="p-2 rounded-lg hover:bg-muted"><Share2 className="w-4 h-4 text-muted-foreground" /></button>
             <button onClick={() => window.open(storeUrl, '_blank')} className="p-2 rounded-lg hover:bg-muted"><ExternalLink className="w-4 h-4 text-muted-foreground" /></button>
           </div>
+        </div>
+      )}
+
+      {/* Category Badge */}
+      {categoryConfig && (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+            <categoryConfig.icon className="w-3.5 h-3.5" />
+            {categoryConfig.name}
+          </div>
+          <span className="text-xs text-muted-foreground">{categoryConfig.features.length} features enabled</span>
         </div>
       )}
 
@@ -202,7 +219,7 @@ const SettingsPage = () => {
         <DialogContent className="rounded-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Theme' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : 'Settings'}
+              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer & Devices' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Theme' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : 'Settings'}
             </DialogTitle>
             <DialogDescription>Manage your settings</DialogDescription>
           </DialogHeader>
@@ -226,10 +243,6 @@ const SettingsPage = () => {
                 {!checkingSlug && slugAvailable === true && bizSlug.trim() && <p className="text-xs text-success font-medium flex items-center gap-1 mt-1"><Check className="w-3 h-3" /> Available</p>}
                 {!checkingSlug && slugAvailable === false && bizSlug.trim() && <p className="text-xs text-destructive font-medium flex items-center gap-1 mt-1"><X className="w-3 h-3" /> Taken</p>}
               </div>
-              <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Printer Paper Size</label>
-                <div className="flex gap-2">{['58mm', '80mm'].map(s => (
-                  <button key={s} onClick={() => setBizPrinterType(s)} className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${bizPrinterType === s ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>{s}</button>
-                ))}</div></div>
               <motion.button whileTap={{ scale: 0.97 }} onClick={handleSaveBusiness} disabled={savingBiz}
                 className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                 {savingBiz ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
@@ -238,19 +251,80 @@ const SettingsPage = () => {
           )}
 
           {activePanel === 'printer' && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Enable Bluetooth and put your Ezo printer in pairing mode.</p>
+            <div className="space-y-4">
+              {/* Printer Brand Selection */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">Select Printer Brand</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PRINTER_BRANDS.map(brand => (
+                    <button key={brand.id} onClick={() => { setSelectedPrinterBrand(brand.id); setSelectedPrinterModel(''); }}
+                      className={`p-2.5 rounded-xl text-xs font-semibold text-center transition-colors ${selectedPrinterBrand === brand.id ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'}`}>
+                      {brand.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Model Selection */}
+              {currentBrand && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">Select Model</label>
+                  <div className="space-y-1.5">
+                    {currentBrand.models.map(model => (
+                      <button key={model} onClick={() => setSelectedPrinterModel(model)}
+                        className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${selectedPrinterModel === model ? 'bg-primary/10 border border-primary/30 text-primary font-semibold' : 'bg-secondary text-secondary-foreground hover:bg-muted'}`}>
+                        {model}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Connection Types */}
+              {currentBrand && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">Connection Type</label>
+                  <div className="flex gap-2">
+                    {currentBrand.connectionType.map(ct => (
+                      <div key={ct} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium">
+                        {ct === 'bluetooth' && <Bluetooth className="w-3 h-3" />}
+                        {ct === 'usb' && <Usb className="w-3 h-3" />}
+                        {ct === 'wifi' && <Wifi className="w-3 h-3" />}
+                        {ct === 'network' && <Globe className="w-3 h-3" />}
+                        {ct.charAt(0).toUpperCase() + ct.slice(1)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Paper Size */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">Paper Size</label>
+                <div className="flex gap-2">
+                  {['58mm', '80mm'].map(s => (
+                    <button key={s} onClick={() => setBizPrinterType(s)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${bizPrinterType === s ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Connect Button */}
               <button onClick={() => void handleConnectPrinter()} disabled={connecting}
                 className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
-                {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />} Connect Printer
+                {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                {selectedPrinterBrand === 'ezo' ? 'Connect via Bluetooth' : 'Connect Printer'}
               </button>
+
               <div className="rounded-xl bg-muted/50 p-3 space-y-1">
-                <p className="text-xs font-semibold text-foreground">Steps:</p>
+                <p className="text-xs font-semibold text-foreground">Connection Steps:</p>
                 <ol className="text-xs text-muted-foreground list-decimal pl-4 space-y-0.5">
-                  <li>Turn on printer and Bluetooth</li>
-                  <li>Enter pairing mode</li>
-                  <li>Click Connect above</li>
-                  <li>Select from browser popup</li>
+                  <li>Turn on your {currentBrand?.name || 'printer'}</li>
+                  <li>Enable Bluetooth/WiFi on printer</li>
+                  <li>Click "Connect" above</li>
+                  <li>Select device from popup</li>
                 </ol>
               </div>
             </div>
@@ -274,12 +348,13 @@ const SettingsPage = () => {
             <div className="space-y-4">
               <p className="text-sm text-foreground font-semibold">Choose a Theme</p>
               <div className="grid grid-cols-2 gap-3">
-                {(Object.entries(THEME_PRESETS) as [ThemePresetKey, typeof THEME_PRESETS[ThemePresetKey]][]).map(([key, t]) => (
+                {(Object.entries(DASHBOARD_THEMES) as [DashboardThemeKey, typeof DASHBOARD_THEMES[DashboardThemeKey]][]).map(([key, t]) => (
                   <button key={key} onClick={() => setSelectedTheme(key)}
                     className={`p-3 rounded-xl border-2 text-left space-y-2 transition-colors ${selectedTheme === key ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg" style={{ background: `hsl(${t.primary})` }} />
                       <div className="w-8 h-8 rounded-lg" style={{ background: `hsl(${t.accent})` }} />
+                      <span className="text-lg">{t.emoji}</span>
                     </div>
                     <p className="text-xs font-semibold text-foreground">{t.label}</p>
                     {selectedTheme === key && <Check className="w-4 h-4 text-primary" />}
@@ -295,27 +370,33 @@ const SettingsPage = () => {
 
           {activePanel === 'notifications' && (
             <div className="space-y-3">
-              <p className="text-sm text-foreground font-semibold">Notification Preferences</p>
-              <p className="text-xs text-muted-foreground">Push notifications for low stock alerts, daily revenue summaries, and new customer registrations coming soon.</p>
+              <p className="text-sm text-muted-foreground">Notification preferences coming soon.</p>
+              {['Low stock alerts', 'New customer alerts', 'Daily sales summary', 'Offer expiry reminders'].map(item => (
+                <div key={item} className="flex items-center justify-between p-3 rounded-xl bg-secondary">
+                  <span className="text-sm text-foreground">{item}</span>
+                  <div className="w-10 h-6 rounded-full bg-primary/30 relative"><div className="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-primary transition-all" /></div>
+                </div>
+              ))}
             </div>
           )}
 
           {activePanel === 'security' && (
             <div className="space-y-3">
-              <p className="text-sm text-foreground font-semibold">Security</p>
-              <div className="rounded-xl bg-muted/50 p-3 space-y-1">
-                <p className="text-xs font-semibold text-foreground">Session Info</p>
-                <p className="text-xs text-muted-foreground">Email: {user?.email}</p>
-                <p className="text-xs text-muted-foreground">Role: {isAdmin ? 'Admin' : 'Owner'}</p>
-                <p className="text-xs text-muted-foreground">Auto-refresh: Enabled</p>
+              <p className="text-sm text-muted-foreground">Current session: Active</p>
+              <div className="rounded-xl bg-success/10 p-3">
+                <p className="text-sm font-semibold text-success">Session Active</p>
+                <p className="text-xs text-muted-foreground">Last login: {new Date().toLocaleDateString()}</p>
               </div>
             </div>
           )}
 
           {activePanel === 'language' && (
             <div className="space-y-3">
-              <p className="text-sm text-foreground font-semibold">Language</p>
-              <p className="text-xs text-muted-foreground">Currently English. Additional languages coming soon.</p>
+              {['English', 'Hindi', 'Tamil', 'Telugu', 'Marathi'].map(lang => (
+                <button key={lang} className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${lang === 'English' ? 'bg-primary/10 border border-primary/30 text-primary font-semibold' : 'bg-secondary text-secondary-foreground hover:bg-muted'}`}>
+                  {lang} {lang === 'English' && <Check className="inline w-4 h-4 ml-2" />}
+                </button>
+              ))}
             </div>
           )}
         </DialogContent>
