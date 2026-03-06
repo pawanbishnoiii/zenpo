@@ -11,6 +11,7 @@ import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/store/useAppStore';
 import { useToast } from '@/hooks/use-toast';
+import { getCategoryConfig } from '@/lib/categoryConfig';
 
 const Workspace = () => {
   const [search, setSearch] = useState('');
@@ -26,6 +27,8 @@ const Workspace = () => {
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const { business } = useBusiness();
   const { toast } = useToast();
+
+  const categoryConfig = business ? getCategoryConfig(business.category) : null;
 
   const fetchProducts = async () => {
     if (!business) return;
@@ -93,19 +96,19 @@ const Workspace = () => {
 
   return (
     <div className="px-4 pt-4 lg:pl-24 max-w-5xl mx-auto space-y-4 pb-24">
-      <PageHeader title="Workspace" backTo="/dashboard" actions={
-        <div className="flex items-center gap-2">
+      <PageHeader title={categoryConfig?.navLabel.workspace || 'Workspace'} backTo="/dashboard" actions={
+        <div className="flex items-center gap-1.5 flex-wrap">
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowScanner(true)}
-            className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5">
+            className="px-2.5 py-1.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1">
             <ScanLine className="w-3.5 h-3.5" /> Scan
           </motion.button>
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowGallery(true)}
-            className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5">
+            className="px-2.5 py-1.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1">
             <Download className="w-3.5 h-3.5" /> Gallery
           </motion.button>
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setScannedBarcode(null); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold shadow-soft">
-            <Plus className="w-4 h-4" /> Add
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold shadow-soft">
+            <Plus className="w-3.5 h-3.5" /> Add
           </motion.button>
         </div>
       } />
@@ -113,13 +116,13 @@ const Workspace = () => {
       <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input type="text" placeholder="Search by name, SKU, or barcode..." value={search} onChange={e => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
       </motion.div>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
         {allCategories.map(cat => (
           <motion.button key={cat} whileTap={{ scale: 0.95 }} onClick={() => setActiveCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
             {cat}
           </motion.button>
         ))}
@@ -141,24 +144,25 @@ const Workspace = () => {
         </div>
         <div className="flex items-center gap-2">
           <motion.button whileTap={{ scale: 0.95 }} onClick={handleShareStore}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-secondary text-secondary-foreground">
-            <Share2 className="w-3.5 h-3.5" /> Share Store
+            className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 bg-secondary text-secondary-foreground">
+            <Share2 className="w-3.5 h-3.5" /> Share
           </motion.button>
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAdvancedMode(v => !v)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${advancedMode ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 ${advancedMode ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
             <SlidersHorizontal className="w-3.5 h-3.5" /> Advanced
           </motion.button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* Mobile-optimized product grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredProducts.map(product => {
           const imgSrc = getImageSrc(product.imageUrl);
           const hasDiscount = product.discountPrice < product.price;
           return (
             <motion.div key={product.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               className="rounded-2xl glass-card shadow-soft overflow-hidden group">
-              <div className="aspect-[2/1] bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center relative overflow-hidden">
+              <div className="aspect-[2.5/1] bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center relative overflow-hidden">
                 {imgSrc ? <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-muted-foreground/30" />}
                 {hasDiscount && <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground">{Math.round(((product.price - product.discountPrice) / product.price) * 100)}% OFF</span>}
                 {product.stock < 20 && <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning text-warning-foreground">Low Stock</span>}
