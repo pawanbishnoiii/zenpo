@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy, Plus, Bluetooth, Wifi, Usb } from 'lucide-react';
+import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy, Bluetooth, Wifi, Usb, Paintbrush, Star, MessageSquare } from 'lucide-react';
 import PageHeader from '@/components/layout/PageHeader';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness } from '@/hooks/useBusiness';
@@ -12,7 +12,15 @@ import { useNavigate } from 'react-router-dom';
 import { DASHBOARD_THEMES, type DashboardThemeKey, PRINTER_BRANDS } from '@/lib/categoryConfig';
 import { getCategoryConfig } from '@/lib/categoryConfig';
 
-type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | null;
+type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | 'store_design' | 'reviews' | null;
+
+const STORE_THEME_OPTIONS = [
+  { id: 'suspended', label: 'Minimal', desc: 'Clean, modern monochrome', emoji: '⚡' },
+  { id: 'classic', label: 'Classic', desc: 'Elegant gold & dark', emoji: '✨' },
+  { id: 'vibrant', label: 'Vibrant', desc: 'Bold violet & pink gradient', emoji: '🎨' },
+  { id: 'nature', label: 'Nature', desc: 'Fresh green & earth tones', emoji: '🌿' },
+  { id: 'ocean', label: 'Ocean', desc: 'Cool blue & sky tones', emoji: '🌊' },
+];
 
 const SettingsPage = () => {
   const { signOut, user, isAdmin } = useAuth();
@@ -36,6 +44,12 @@ const SettingsPage = () => {
   const [selectedTheme, setSelectedTheme] = useState<DashboardThemeKey>('fire_orange');
   const [selectedPrinterBrand, setSelectedPrinterBrand] = useState('ezo');
   const [selectedPrinterModel, setSelectedPrinterModel] = useState('');
+  const [selectedStoreTheme, setSelectedStoreTheme] = useState('suspended');
+  const [savingStoreTheme, setSavingStoreTheme] = useState(false);
+
+  // Reviews management
+  const [pendingReviews, setPendingReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
@@ -49,6 +63,7 @@ const SettingsPage = () => {
       setBizGst(business.gst_number || '');
       setBizSlug(business.store_slug || '');
       setBizPrinterType(business.printer_type || '58mm');
+      setSelectedStoreTheme((business as any).store_theme || 'suspended');
     }
   }, [business]);
 
@@ -58,7 +73,12 @@ const SettingsPage = () => {
         if (data) { setProfileName(data.name || ''); setProfilePhone(data.phone || ''); }
       });
     }
-  }, [activePanel, user]);
+    if (activePanel === 'reviews' && business) {
+      setLoadingReviews(true);
+      supabase.from('product_reviews').select('*').eq('business_id', business.id).eq('is_approved', false).order('created_at', { ascending: false })
+        .then(({ data }) => { setPendingReviews(data || []); setLoadingReviews(false); });
+    }
+  }, [activePanel, user, business]);
 
   useEffect(() => {
     if (activePanel !== 'business' || !bizSlug.trim()) { setSlugAvailable(null); return; }
@@ -106,19 +126,31 @@ const SettingsPage = () => {
     document.documentElement.style.setProperty('--primary', t.primary);
     document.documentElement.style.setProperty('--ring', t.primary);
     document.documentElement.style.setProperty('--accent', t.accent);
-    document.documentElement.style.setProperty('--gradient-start', t.primary);
-    document.documentElement.style.setProperty('--gradient-end', t.accent);
-    toast({ title: `Theme: ${t.label}`, description: 'Applied! This resets on page refresh.' });
+    toast({ title: `Theme: ${t.label}`, description: 'Applied!' });
+  };
+
+  const handleSaveStoreTheme = async () => {
+    if (!business) return;
+    setSavingStoreTheme(true);
+    const { error } = await supabase.from('businesses').update({ store_theme: selectedStoreTheme }).eq('id', business.id);
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Store theme saved!' }); refetch(); setActivePanel(null); }
+    setSavingStoreTheme(false);
+  };
+
+  const handleApproveReview = async (id: string) => {
+    await supabase.from('product_reviews').update({ is_approved: true }).eq('id', id);
+    setPendingReviews(prev => prev.filter(r => r.id !== id));
+    toast({ title: 'Review approved!' });
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    await supabase.from('product_reviews').delete().eq('id', id);
+    setPendingReviews(prev => prev.filter(r => r.id !== id));
+    toast({ title: 'Review deleted' });
   };
 
   const storeUrl = bizSlug ? `${window.location.origin}/store/${bizSlug}` : '';
-
-  const handleShareStore = () => {
-    if (!storeUrl) return;
-    if (navigator.share) navigator.share({ title: business?.business_name, url: storeUrl });
-    else { navigator.clipboard.writeText(storeUrl); toast({ title: 'Store link copied!' }); }
-  };
-
   const currentBrand = PRINTER_BRANDS.find(b => b.id === selectedPrinterBrand);
 
   const settingsGroups = useMemo(() => {
@@ -127,8 +159,9 @@ const SettingsPage = () => {
         title: 'Business',
         items: [
           { key: 'business' as SettingsPanel, icon: Store, label: 'Business Profile', desc: 'Name, GST, address, store link' },
+          { key: 'store_design' as SettingsPanel, icon: Paintbrush, label: 'Design Store', desc: 'Store page theme & appearance' },
           { key: 'printer' as SettingsPanel, icon: Printer, label: 'Printer & Devices', desc: 'Printer brand, model, connection' },
-          { key: 'theme' as SettingsPanel, icon: Palette, label: 'Theme', desc: 'Colors and appearance' },
+          { key: 'theme' as SettingsPanel, icon: Palette, label: 'Dashboard Theme', desc: 'Colors and appearance' },
         ],
       },
       {
@@ -137,6 +170,7 @@ const SettingsPage = () => {
           { nav: '/offers', icon: Tag, label: 'Offers & Coupons', desc: 'Discount campaigns' },
           { nav: '/customers', icon: Users, label: categoryConfig?.navLabel.customers || 'Customer Manager', desc: 'CRM and analytics' },
           { nav: '/history', icon: Shield, label: 'Bill History', desc: 'All past invoices' },
+          { key: 'reviews' as SettingsPanel, icon: MessageSquare, label: 'Reviews', desc: 'Approve customer reviews' },
         ],
       },
       {
@@ -172,20 +206,16 @@ const SettingsPage = () => {
           <div className="flex gap-1.5">
             <button onClick={() => { navigator.clipboard.writeText(storeUrl); toast({ title: 'Copied!' }); }}
               className="p-2 rounded-lg hover:bg-muted"><Copy className="w-4 h-4 text-muted-foreground" /></button>
-            <button onClick={handleShareStore} className="p-2 rounded-lg hover:bg-muted"><Share2 className="w-4 h-4 text-muted-foreground" /></button>
             <button onClick={() => window.open(storeUrl, '_blank')} className="p-2 rounded-lg hover:bg-muted"><ExternalLink className="w-4 h-4 text-muted-foreground" /></button>
           </div>
         </div>
       )}
 
-      {/* Category Badge */}
       {categoryConfig && (
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
-            <categoryConfig.icon className="w-3.5 h-3.5" />
-            {categoryConfig.name}
+            <categoryConfig.icon className="w-3.5 h-3.5" /> {categoryConfig.name}
           </div>
-          <span className="text-xs text-muted-foreground">{categoryConfig.features.length} features enabled</span>
         </div>
       )}
 
@@ -219,7 +249,7 @@ const SettingsPage = () => {
         <DialogContent className="rounded-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer & Devices' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Theme' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : 'Settings'}
+              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer & Devices' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Dashboard Theme' : activePanel === 'store_design' ? 'Design Your Store' : activePanel === 'reviews' ? 'Manage Reviews' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : 'Settings'}
             </DialogTitle>
             <DialogDescription>Manage your settings</DialogDescription>
           </DialogHeader>
@@ -250,9 +280,58 @@ const SettingsPage = () => {
             </div>
           )}
 
+          {activePanel === 'store_design' && (
+            <div className="space-y-4">
+              <p className="text-sm text-foreground font-semibold">Choose Store Page Theme</p>
+              <p className="text-xs text-muted-foreground">This theme applies to your public store page that customers see.</p>
+              <div className="space-y-2">
+                {STORE_THEME_OPTIONS.map(t => (
+                  <button key={t.id} onClick={() => setSelectedStoreTheme(t.id)}
+                    className={`w-full p-3 rounded-xl border-2 text-left flex items-center gap-3 transition-colors ${selectedStoreTheme === t.id ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
+                    <span className="text-2xl">{t.emoji}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{t.label}</p>
+                      <p className="text-xs text-muted-foreground">{t.desc}</p>
+                    </div>
+                    {selectedStoreTheme === t.id && <Check className="w-4 h-4 text-primary" />}
+                  </button>
+                ))}
+              </div>
+              <motion.button whileTap={{ scale: 0.97 }} onClick={handleSaveStoreTheme} disabled={savingStoreTheme}
+                className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                {savingStoreTheme ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paintbrush className="w-4 h-4" />} Save Store Theme
+              </motion.button>
+              {business?.store_slug && (
+                <button onClick={() => window.open(`${window.location.origin}/store/${business.store_slug}`, '_blank')}
+                  className="w-full py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold flex items-center justify-center gap-2">
+                  <ExternalLink className="w-4 h-4" /> Preview Store
+                </button>
+              )}
+            </div>
+          )}
+
+          {activePanel === 'reviews' && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Approve or reject customer reviews for your store.</p>
+              {loadingReviews ? <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> :
+                pendingReviews.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">No pending reviews</p> :
+                  pendingReviews.map(r => (
+                    <div key={r.id} className="rounded-xl border border-border p-3 space-y-2">
+                      <div className="flex items-center gap-1">{[...Array(5)].map((_, j) => <Star key={j} className={`w-3 h-3 ${j < r.rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/20'}`} />)}</div>
+                      {r.review_text && <p className="text-sm text-foreground italic">"{r.review_text}"</p>}
+                      <p className="text-xs text-muted-foreground">{r.reviewer_name} • {new Date(r.created_at).toLocaleDateString()}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleApproveReview(r.id)} className="flex-1 py-1.5 rounded-lg bg-success/10 text-success text-xs font-semibold">Approve</button>
+                        <button onClick={() => handleDeleteReview(r.id)} className="flex-1 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold">Delete</button>
+                      </div>
+                    </div>
+                  ))
+              }
+            </div>
+          )}
+
           {activePanel === 'printer' && (
             <div className="space-y-4">
-              {/* Printer Brand Selection */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-2 block">Select Printer Brand</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -264,8 +343,6 @@ const SettingsPage = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Model Selection */}
               {currentBrand && (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">Select Model</label>
@@ -279,8 +356,6 @@ const SettingsPage = () => {
                   </div>
                 </div>
               )}
-
-              {/* Connection Types */}
               {currentBrand && (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-2 block">Connection Type</label>
@@ -297,8 +372,6 @@ const SettingsPage = () => {
                   </div>
                 </div>
               )}
-
-              {/* Paper Size */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-2 block">Paper Size</label>
                 <div className="flex gap-2">
@@ -310,23 +383,11 @@ const SettingsPage = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Connect Button */}
               <button onClick={() => void handleConnectPrinter()} disabled={connecting}
                 className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                 {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                 {selectedPrinterBrand === 'ezo' ? 'Connect via Bluetooth' : 'Connect Printer'}
               </button>
-
-              <div className="rounded-xl bg-muted/50 p-3 space-y-1">
-                <p className="text-xs font-semibold text-foreground">Connection Steps:</p>
-                <ol className="text-xs text-muted-foreground list-decimal pl-4 space-y-0.5">
-                  <li>Turn on your {currentBrand?.name || 'printer'}</li>
-                  <li>Enable Bluetooth/WiFi on printer</li>
-                  <li>Click "Connect" above</li>
-                  <li>Select device from popup</li>
-                </ol>
-              </div>
             </div>
           )}
 
@@ -346,7 +407,7 @@ const SettingsPage = () => {
 
           {activePanel === 'theme' && (
             <div className="space-y-4">
-              <p className="text-sm text-foreground font-semibold">Choose a Theme</p>
+              <p className="text-sm text-foreground font-semibold">Choose Dashboard Theme</p>
               <div className="grid grid-cols-2 gap-3">
                 {(Object.entries(DASHBOARD_THEMES) as [DashboardThemeKey, typeof DASHBOARD_THEMES[DashboardThemeKey]][]).map(([key, t]) => (
                   <button key={key} onClick={() => setSelectedTheme(key)}
@@ -370,7 +431,6 @@ const SettingsPage = () => {
 
           {activePanel === 'notifications' && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Notification preferences coming soon.</p>
               {['Low stock alerts', 'New customer alerts', 'Daily sales summary', 'Offer expiry reminders'].map(item => (
                 <div key={item} className="flex items-center justify-between p-3 rounded-xl bg-secondary">
                   <span className="text-sm text-foreground">{item}</span>
@@ -382,7 +442,6 @@ const SettingsPage = () => {
 
           {activePanel === 'security' && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Current session: Active</p>
               <div className="rounded-xl bg-success/10 p-3">
                 <p className="text-sm font-semibold text-success">Session Active</p>
                 <p className="text-xs text-muted-foreground">Last login: {new Date().toLocaleDateString()}</p>

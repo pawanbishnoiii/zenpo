@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Search, Plus, Barcode, Database, Loader2, SlidersHorizontal, Pencil, Trash2, Download, Package, ScanLine, ImagePlus, Share2 } from 'lucide-react';
+import { Search, Plus, Barcode, Loader2, Pencil, Trash2, Package, ScanLine, Share2, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ProductFormDialog from '@/components/products/ProductFormDialog';
 import ProductEditDialog from '@/components/products/ProductEditDialog';
@@ -22,8 +22,6 @@ const Workspace = () => {
   const [selectedBarcode, setSelectedBarcode] = useState<any>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [advancedMode, setAdvancedMode] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const { business } = useBusiness();
   const { toast } = useToast();
@@ -48,15 +46,6 @@ const Workspace = () => {
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Deleted' }); setProducts(prev => prev.filter(p => p.id !== id));
-  };
-
-  const handleSeedCatalog = async () => {
-    if (!business?.id) return;
-    setSeeding(true);
-    const { data, error } = await supabase.rpc('seed_business_starter_catalog', { _business_id: business.id });
-    if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
-    else { toast({ title: 'Starter items added', description: `${Number(data || 0)} new items.` }); await fetchProducts(); }
-    setSeeding(false);
   };
 
   const handleBarcodeScan = (code: string) => {
@@ -128,33 +117,17 @@ const Workspace = () => {
         ))}
       </div>
 
-      {advancedMode && (
-        <div className="rounded-2xl glass-card p-3 border border-border/60 flex items-center justify-between gap-2">
-          <div><p className="text-sm font-semibold text-foreground">Starter Catalog</p><p className="text-xs text-muted-foreground">Add pre-built items for your type</p></div>
-          <button onClick={() => void handleSeedCatalog()} disabled={seeding}
-            className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
-            {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />} Seed
-          </button>
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>{products.length} items</span><span>•</span><span>{products.filter(p => p.stock < 20).length} low stock</span>
         </div>
-        <div className="flex items-center gap-2">
-          <motion.button whileTap={{ scale: 0.95 }} onClick={handleShareStore}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 bg-secondary text-secondary-foreground">
-            <Share2 className="w-3.5 h-3.5" /> Share
-          </motion.button>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAdvancedMode(v => !v)}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 ${advancedMode ? 'bg-accent/10 text-accent' : 'bg-secondary text-secondary-foreground'}`}>
-            <SlidersHorizontal className="w-3.5 h-3.5" /> Advanced
-          </motion.button>
-        </div>
+        <motion.button whileTap={{ scale: 0.95 }} onClick={handleShareStore}
+          className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 bg-secondary text-secondary-foreground">
+          <Share2 className="w-3.5 h-3.5" /> Share
+        </motion.button>
       </div>
 
-      {/* Mobile-optimized product grid */}
+      {/* Product grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredProducts.map(product => {
           const imgSrc = getImageSrc(product.imageUrl);
@@ -172,6 +145,7 @@ const Workspace = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate text-foreground">{product.name}</p>
                     <p className="text-xs text-muted-foreground">{product.category} • {product.sku}</p>
+                    {(product as any).brandName && <p className="text-[10px] text-muted-foreground">{(product as any).brandName}</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-foreground">₹{product.discountPrice}</p>

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Receipt, Users, Settings, ScanLine } from 'lucide-react';
+import { LayoutDashboard, Package, Receipt, Settings, ScanLine } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBusiness } from '@/hooks/useBusiness';
 import { getCategoryConfig } from '@/lib/categoryConfig';
@@ -14,7 +14,6 @@ const BottomNav = () => {
     { path: '/dashboard', icon: LayoutDashboard, label: config?.navLabel.home || 'Home' },
     { path: '/workspace', icon: Package, label: config?.navLabel.workspace || 'Workspace' },
     { path: '/billing', icon: Receipt, label: config?.navLabel.billing || 'Billing' },
-    { path: '/customers', icon: Users, label: config?.navLabel.customers || 'Customers' },
     { path: '/settings', icon: Settings, label: config?.navLabel.settings || 'Settings' },
   ];
 
