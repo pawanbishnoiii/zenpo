@@ -69,6 +69,7 @@ export type Database = {
           phone: string | null
           printer_type: string | null
           store_slug: string | null
+          store_theme: string | null
           theme: string | null
           updated_at: string
         }
@@ -84,6 +85,7 @@ export type Database = {
           phone?: string | null
           printer_type?: string | null
           store_slug?: string | null
+          store_theme?: string | null
           theme?: string | null
           updated_at?: string
         }
@@ -99,6 +101,7 @@ export type Database = {
           phone?: string | null
           printer_type?: string | null
           store_slug?: string | null
+          store_theme?: string | null
           theme?: string | null
           updated_at?: string
         }
@@ -339,6 +342,89 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: true
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          product_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          product_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          product_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_reviews: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          is_approved: boolean
+          product_id: string
+          rating: number
+          review_text: string | null
+          reviewer_email: string | null
+          reviewer_name: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          product_id: string
+          rating?: number
+          review_text?: string | null
+          reviewer_email?: string | null
+          reviewer_name?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          product_id?: string
+          rating?: number
+          review_text?: string | null
+          reviewer_email?: string | null
+          reviewer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
