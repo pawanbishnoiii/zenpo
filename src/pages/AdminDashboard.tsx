@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, ArrowLeft, Globe, Database, ToggleLeft, ToggleRight, Eye, Search, Mail, Bell, Server, Send, Activity, AlertTriangle, CheckCircle, XCircle, Save } from 'lucide-react';
+import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, ArrowLeft, Globe, Database, ToggleLeft, ToggleRight, Eye, Search, Mail, Bell, Server, Send, Activity, AlertTriangle, CheckCircle, XCircle, Save, Clock } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
