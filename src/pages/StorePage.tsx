@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Store, Phone, MapPin, Package, Loader2, Star, ChevronLeft, ChevronRight, Send, X, ShoppingBag, Clock, Zap, Heart, MessageSquare, ExternalLink } from 'lucide-react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { Store, Phone, MapPin, Package, Loader2, Star, ChevronLeft, ChevronRight, Send, X, ShoppingBag, Clock, Zap, Heart, MessageSquare, ExternalLink, Mail, ArrowUp, Menu, Instagram, Facebook, Twitter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useRef } from 'react';
 
-const STORE_THEMES = {
-  suspended: { hero: 'from-slate-900 to-slate-700', accent: 'bg-slate-800', btn: 'bg-white text-slate-900', card: 'bg-white', text: 'text-slate-900' },
-  classic: { hero: 'from-zinc-900 via-zinc-800 to-zinc-900', accent: 'bg-zinc-800', btn: 'bg-amber-500 text-white', card: 'bg-zinc-50', text: 'text-zinc-900' },
-  vibrant: { hero: 'from-violet-600 via-fuchsia-500 to-pink-500', accent: 'bg-violet-600', btn: 'bg-white text-violet-700', card: 'bg-white', text: 'text-violet-900' },
-  nature: { hero: 'from-emerald-800 via-green-700 to-teal-600', accent: 'bg-emerald-700', btn: 'bg-amber-400 text-emerald-900', card: 'bg-emerald-50', text: 'text-emerald-900' },
-  ocean: { hero: 'from-blue-900 via-cyan-800 to-sky-700', accent: 'bg-blue-800', btn: 'bg-sky-400 text-blue-900', card: 'bg-sky-50', text: 'text-blue-900' },
+const STORE_THEMES: Record<string, any> = {
+  suspended: { hero: 'from-slate-900 to-slate-800', accent: 'bg-slate-800', btn: 'bg-white text-slate-900 hover:bg-slate-100', card: 'bg-white', text: 'text-slate-900', navBg: 'bg-slate-900/95', badge: 'bg-white/10 text-white', reviewBg: 'bg-slate-50', footerBg: 'bg-slate-900', footerText: 'text-slate-400' },
+  classic: { hero: 'from-zinc-900 via-zinc-800 to-zinc-900', accent: 'bg-zinc-800', btn: 'bg-amber-500 text-white hover:bg-amber-600', card: 'bg-zinc-50', text: 'text-zinc-900', navBg: 'bg-zinc-900/95', badge: 'bg-amber-500/10 text-amber-400', reviewBg: 'bg-amber-50', footerBg: 'bg-zinc-900', footerText: 'text-zinc-500' },
+  vibrant: { hero: 'from-violet-600 via-fuchsia-500 to-pink-500', accent: 'bg-violet-600', btn: 'bg-white text-violet-700 hover:bg-violet-50', card: 'bg-white', text: 'text-violet-900', navBg: 'bg-violet-900/95', badge: 'bg-white/15 text-white', reviewBg: 'bg-violet-50', footerBg: 'bg-violet-900', footerText: 'text-violet-400' },
+  nature: { hero: 'from-emerald-800 via-green-700 to-teal-600', accent: 'bg-emerald-700', btn: 'bg-amber-400 text-emerald-900 hover:bg-amber-300', card: 'bg-emerald-50', text: 'text-emerald-900', navBg: 'bg-emerald-900/95', badge: 'bg-amber-400/15 text-amber-300', reviewBg: 'bg-emerald-50', footerBg: 'bg-emerald-900', footerText: 'text-emerald-400' },
+  ocean: { hero: 'from-blue-900 via-cyan-800 to-sky-700', accent: 'bg-blue-800', btn: 'bg-sky-400 text-blue-900 hover:bg-sky-300', card: 'bg-sky-50', text: 'text-blue-900', navBg: 'bg-blue-900/95', badge: 'bg-sky-400/15 text-sky-300', reviewBg: 'bg-sky-50', footerBg: 'bg-blue-900', footerText: 'text-blue-400' },
 };
 
-type StoreThemeKey = keyof typeof STORE_THEMES;
+const AnimSection = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  return <motion.div ref={ref} initial={{ opacity: 0, y: 30 }} animate={inView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.5 }} className={className}>{children}</motion.div>;
+};
 
 const StorePage = () => {
   const { slug } = useParams();
@@ -27,6 +32,10 @@ const StorePage = () => {
   const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 5, text: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const [mobileNav, setMobileNav] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [filterCat, setFilterCat] = useState('All');
 
   useEffect(() => {
     if (!slug) return;
@@ -43,7 +52,13 @@ const StorePage = () => {
     fetchStore();
   }, [slug]);
 
-  const theme = STORE_THEMES[(business?.store_theme as StoreThemeKey) || 'suspended'] || STORE_THEMES.suspended;
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 400);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const theme = STORE_THEMES[(business?.store_theme) || 'suspended'] || STORE_THEMES.suspended;
 
   const getImageSrc = (url: string) => {
     if (!url) return '';
@@ -56,128 +71,246 @@ const StorePage = () => {
     if (!selectedProduct || !business) return;
     setSubmittingReview(true);
     const { error } = await supabase.from('product_reviews').insert({
-      product_id: selectedProduct.id,
-      business_id: business.id,
-      reviewer_name: reviewForm.name.trim(),
-      reviewer_email: reviewForm.email.trim() || null,
-      rating: reviewForm.rating,
-      review_text: reviewForm.text.trim() || null,
+      product_id: selectedProduct.id, business_id: business.id,
+      reviewer_name: reviewForm.name.trim(), reviewer_email: reviewForm.email.trim() || null,
+      rating: reviewForm.rating, review_text: reviewForm.text.trim() || null,
     });
-    if (error) toast({ title: 'Error submitting review', description: error.message, variant: 'destructive' });
-    else { toast({ title: 'Review submitted!', description: 'It will appear after the owner approves it.' }); setShowReviewForm(false); setReviewForm({ name: '', email: '', rating: 5, text: '' }); }
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Review submitted!', description: 'It will appear after approval.' }); setShowReviewForm(false); setReviewForm({ name: '', email: '', rating: 5, text: '' }); }
     setSubmittingReview(false);
   };
 
   const productReviews = selectedProduct ? reviews.filter((r: any) => r.product_id === selectedProduct.id) : [];
   const avgRating = reviews.length > 0 ? (reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1) : null;
+  const productCategories = ['All', ...new Set(products.map((p: any) => p.category))];
+  const filteredProducts = filterCat === 'All' ? products : products.filter((p: any) => p.category === filterCat);
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!business) return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2">
-      <Store className="w-10 h-10 text-muted-foreground/30" />
-      <p className="text-muted-foreground">Store not found</p>
-      <p className="text-xs text-muted-foreground">This store link may not exist.</p>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
+      <Store className="w-12 h-12 text-muted-foreground/20" />
+      <p className="text-lg font-semibold text-foreground">Store Not Found</p>
+      <p className="text-sm text-muted-foreground">This store link may not exist or has been removed.</p>
     </div>
   );
 
+  const navLinks = [
+    { id: 'home', label: 'Home' },
+    { id: 'products', label: 'Products' },
+    { id: 'reviews', label: 'Reviews' },
+    { id: 'contact', label: 'Contact' },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Sticky Navigation */}
+      <nav className={`sticky top-0 z-40 ${theme.navBg} backdrop-blur-xl border-b border-white/10`}>
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {business.logo_url ? (
+              <img src={getImageSrc(business.logo_url)} alt="" className="w-8 h-8 rounded-lg object-cover" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center"><Store className="w-4 h-4 text-white" /></div>
+            )}
+            <span className="text-sm font-bold text-white">{business.business_name}</span>
+          </div>
+          <div className="hidden md:flex items-center gap-6">
+            {navLinks.map(l => (
+              <a key={l.id} href={`#${l.id}`} onClick={() => setActiveSection(l.id)}
+                className={`text-xs font-medium transition-colors ${activeSection === l.id ? 'text-white' : 'text-white/60 hover:text-white'}`}>{l.label}</a>
+            ))}
+          </div>
+          <button onClick={() => setMobileNav(!mobileNav)} className="md:hidden p-2 rounded-lg bg-white/10">
+            <Menu className="w-4 h-4 text-white" />
+          </button>
+        </div>
+        {mobileNav && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className="md:hidden overflow-hidden border-t border-white/10">
+            {navLinks.map(l => (
+              <a key={l.id} href={`#${l.id}`} onClick={() => { setActiveSection(l.id); setMobileNav(false); }}
+                className="block px-6 py-3 text-sm text-white/80 hover:text-white hover:bg-white/5">{l.label}</a>
+            ))}
+          </motion.div>
+        )}
+      </nav>
+
       {/* Hero Section */}
-      <section className={`relative bg-gradient-to-br ${theme.hero} text-white overflow-hidden`}>
+      <section id="home" className={`relative bg-gradient-to-br ${theme.hero} text-white overflow-hidden`}>
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: 'radial-gradient(circle at 25% 25%, white 1px, transparent 1px), radial-gradient(circle at 75% 75%, white 1px, transparent 1px)',
           backgroundSize: '40px 40px',
         }} />
-        <div className="relative max-w-4xl mx-auto px-4 py-16 md:py-24 text-center space-y-4">
-          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.15 }} className="absolute inset-0"
+          style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.2), transparent 70%)' }} />
+        
+        <div className="relative max-w-5xl mx-auto px-4 py-20 md:py-32 text-center space-y-5">
+          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
             {business.logo_url ? (
-              <img src={getImageSrc(business.logo_url)} alt={business.business_name} className="w-20 h-20 mx-auto rounded-2xl object-cover border-2 border-white/20 shadow-xl" />
+              <img src={getImageSrc(business.logo_url)} alt={business.business_name} className="w-24 h-24 mx-auto rounded-3xl object-cover border-2 border-white/20 shadow-2xl" />
             ) : (
-              <div className="w-20 h-20 mx-auto rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/20">
-                <Store className="w-10 h-10 text-white/80" />
+              <div className="w-24 h-24 mx-auto rounded-3xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/20">
+                <Store className="w-12 h-12 text-white/80" />
               </div>
             )}
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="text-3xl md:text-5xl font-bold font-display">{business.business_name}</motion.h1>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="flex items-center justify-center gap-4 text-sm text-white/70">
-            {business.address && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{business.address}</span>}
-            {business.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{business.phone}</span>}
+            className="text-4xl md:text-6xl font-bold font-display">{business.business_name}</motion.h1>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            className="flex items-center justify-center gap-4 flex-wrap text-sm text-white/70">
+            {business.address && <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />{business.address}</span>}
+            {business.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{business.phone}</span>}
           </motion.div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center justify-center gap-6 pt-2">
-            <div className="text-center"><p className="text-2xl font-bold">{products.length}</p><p className="text-xs text-white/60">Products</p></div>
-            {avgRating && <div className="text-center"><p className="text-2xl font-bold flex items-center gap-1"><Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />{avgRating}</p><p className="text-xs text-white/60">{reviews.length} Reviews</p></div>}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+            className="flex items-center justify-center gap-8 pt-3">
+            <div className="text-center"><p className="text-3xl font-bold">{products.length}</p><p className="text-xs text-white/50">Products</p></div>
+            {avgRating && <div className="text-center"><p className="text-3xl font-bold flex items-center gap-1"><Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />{avgRating}</p><p className="text-xs text-white/50">{reviews.length} Reviews</p></div>}
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <a href="#products" className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl ${theme.btn} text-sm font-bold transition-colors`}>
+              <ShoppingBag className="w-4 h-4" /> Browse Products
+            </a>
           </motion.div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
       </section>
 
-      {/* Products Grid */}
-      <section className="max-w-4xl mx-auto px-4 py-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2"><ShoppingBag className="w-5 h-5 text-primary" /> Our Products</h2>
-          <span className="text-xs text-muted-foreground">{products.length} items</span>
-        </div>
+      {/* Products Section */}
+      <AnimSection>
+        <section id="products" className="max-w-5xl mx-auto px-4 py-12 md:py-16 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold font-display text-foreground flex items-center gap-2"><ShoppingBag className="w-6 h-6 text-primary" /> Our Products</h2>
+              <p className="text-xs text-muted-foreground mt-1">{products.length} items available</p>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {products.map((p: any, i: number) => {
-            const imgSrc = getImageSrc(p.image_url || '');
-            const images = p.images || [];
-            const hasDiscount = p.discount_price < p.price;
-            return (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                className="rounded-2xl bg-card border border-border overflow-hidden group cursor-pointer hover:shadow-elevated transition-shadow"
-                onClick={() => { setSelectedProduct(p); setActiveImgIdx(0); }}>
-                <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center relative overflow-hidden">
-                  {imgSrc ? <img src={imgSrc} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <Package className="w-10 h-10 text-muted-foreground/20" />}
-                  {hasDiscount && <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">{Math.round(((p.price - p.discount_price) / p.price) * 100)}% OFF</span>}
-                  {images.length > 1 && <span className="absolute bottom-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/50 text-white">{images.length} pics</span>}
-                </div>
-                <div className="p-3 space-y-1">
-                  <p className="text-sm font-semibold truncate text-foreground">{p.name}</p>
-                  {p.brand_name && <p className="text-[10px] text-muted-foreground">{p.brand_name}</p>}
-                  <div className="flex items-baseline gap-1.5">
-                    <p className="text-base font-bold text-foreground">₹{p.discount_price || p.price}</p>
-                    {hasDiscount && <p className="text-xs text-muted-foreground line-through">₹{p.price}</p>}
+          {/* Category filter */}
+          {productCategories.length > 2 && (
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+              {productCategories.map(cat => (
+                <button key={cat} onClick={() => setFilterCat(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${filterCat === cat ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filteredProducts.map((p: any, i: number) => {
+              const imgSrc = getImageSrc(p.image_url || '');
+              const images = p.images || [];
+              const hasDiscount = p.discount_price < p.price;
+              return (
+                <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                  transition={{ delay: i * 0.03 }} whileHover={{ y: -4 }}
+                  className="rounded-2xl bg-card border border-border overflow-hidden group cursor-pointer hover:shadow-elevated transition-all"
+                  onClick={() => { setSelectedProduct(p); setActiveImgIdx(0); }}>
+                  <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center relative overflow-hidden">
+                    {imgSrc ? <img src={imgSrc} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <Package className="w-10 h-10 text-muted-foreground/20" />}
+                    {hasDiscount && <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">{Math.round(((p.price - p.discount_price) / p.price) * 100)}% OFF</span>}
+                    {images.length > 1 && <span className="absolute bottom-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/50 text-white">{images.length} pics</span>}
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-        {products.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">No products listed yet</p>}
-      </section>
+                  <div className="p-3 space-y-1">
+                    <p className="text-sm font-semibold truncate text-foreground">{p.name}</p>
+                    {p.brand_name && <p className="text-[10px] text-muted-foreground">{p.brand_name}</p>}
+                    <div className="flex items-baseline gap-1.5">
+                      <p className="text-base font-bold text-foreground">₹{p.discount_price || p.price}</p>
+                      {hasDiscount && <p className="text-xs text-muted-foreground line-through">₹{p.price}</p>}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+          {products.length === 0 && <p className="text-center text-sm text-muted-foreground py-12">No products listed yet</p>}
+        </section>
+      </AnimSection>
 
       {/* Reviews Section */}
-      {reviews.length > 0 && (
-        <section className="max-w-4xl mx-auto px-4 py-8 space-y-4">
-          <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2"><MessageSquare className="w-5 h-5 text-primary" /> Customer Reviews</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {reviews.slice(0, 6).map((r: any) => (
-              <div key={r.id} className="rounded-2xl bg-card border border-border p-4 space-y-2">
-                <div className="flex items-center gap-1">{[...Array(5)].map((_, j) => <Star key={j} className={`w-3.5 h-3.5 ${j < r.rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'}`} />)}</div>
-                {r.review_text && <p className="text-sm text-foreground italic">"{r.review_text}"</p>}
-                <p className="text-xs text-muted-foreground">{r.reviewer_name} • {new Date(r.created_at).toLocaleDateString()}</p>
+      <AnimSection>
+        <section id="reviews" className="max-w-5xl mx-auto px-4 py-12 md:py-16 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold font-display text-foreground flex items-center gap-2"><MessageSquare className="w-6 h-6 text-primary" /> Customer Reviews</h2>
+            {avgRating && <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10"><Star className="w-3.5 h-3.5 text-warning fill-warning" /><span className="text-sm font-bold text-foreground">{avgRating}</span></div>}
+          </div>
+          {reviews.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {reviews.slice(0, 9).map((r: any, i: number) => (
+                <motion.div key={r.id} initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
+                  className={`rounded-2xl ${theme.reviewBg} border border-border p-4 space-y-2`}>
+                  <div className="flex items-center gap-1">{[...Array(5)].map((_, j) => <Star key={j} className={`w-3.5 h-3.5 ${j < r.rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/20'}`} />)}</div>
+                  {r.review_text && <p className="text-sm text-foreground italic">"{r.review_text}"</p>}
+                  <p className="text-xs text-muted-foreground">{r.reviewer_name} • {new Date(r.created_at).toLocaleDateString()}</p>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 rounded-2xl bg-card border border-border">
+              <MessageSquare className="w-8 h-8 mx-auto text-muted-foreground/20 mb-2" />
+              <p className="text-sm text-muted-foreground">No reviews yet. Be the first to review!</p>
+            </div>
+          )}
+        </section>
+      </AnimSection>
+
+      {/* Contact Section */}
+      <AnimSection>
+        <section id="contact" className="max-w-5xl mx-auto px-4 py-12 md:py-16 space-y-6">
+          <h2 className="text-2xl font-bold font-display text-foreground text-center">Get in Touch</h2>
+          <div className="max-w-md mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {business.phone && (
+              <a href={`tel:${business.phone}`} className="rounded-2xl bg-card border border-border p-5 text-center space-y-2 hover:shadow-elevated transition-shadow">
+                <Phone className="w-6 h-6 mx-auto text-primary" /><p className="text-xs font-bold text-foreground">Call Us</p><p className="text-xs text-muted-foreground">{business.phone}</p>
+              </a>
+            )}
+            {business.address && (
+              <div className="rounded-2xl bg-card border border-border p-5 text-center space-y-2">
+                <MapPin className="w-6 h-6 mx-auto text-primary" /><p className="text-xs font-bold text-foreground">Visit Us</p><p className="text-xs text-muted-foreground">{business.address}</p>
               </div>
-            ))}
+            )}
           </div>
         </section>
-      )}
+      </AnimSection>
 
       {/* Footer */}
-      <footer className="border-t border-border py-6">
-        <div className="max-w-4xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"><Zap className="w-3.5 h-3.5 text-primary" /></div>
-            <span className="text-xs font-bold text-foreground">{business.business_name}</span>
+      <footer className={`${theme.footerBg} text-white py-10`}>
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
+            <div className="flex items-center gap-3">
+              {business.logo_url ? (
+                <img src={getImageSrc(business.logo_url)} alt="" className="w-10 h-10 rounded-xl object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"><Store className="w-5 h-5 text-white" /></div>
+              )}
+              <div>
+                <p className="text-sm font-bold">{business.business_name}</p>
+                {business.address && <p className={`text-xs ${theme.footerText}`}>{business.address}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              {navLinks.map(l => (
+                <a key={l.id} href={`#${l.id}`} className={`text-xs ${theme.footerText} hover:text-white transition-colors`}>{l.label}</a>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {business.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{business.phone}</span>}
-            {business.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{business.address}</span>}
+          <div className={`border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3`}>
+            <p className={`text-xs ${theme.footerText}`}>© {new Date().getFullYear()} {business.business_name}. All rights reserved.</p>
+            <p className={`text-[10px] ${theme.footerText} flex items-center gap-1`}>Powered by <Zap className="w-3 h-3" /> ZEN POS</p>
           </div>
-          <p className="text-[10px] text-muted-foreground">Powered by ZEN POS</p>
         </div>
       </footer>
+
+      {/* Back to top */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full gradient-primary text-primary-foreground flex items-center justify-center shadow-xl glow-primary">
+            <ArrowUp className="w-4 h-4" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Product Detail Modal */}
       <AnimatePresence>
@@ -187,7 +320,6 @@ const StorePage = () => {
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30 }}
               onClick={e => e.stopPropagation()} className="w-full max-w-lg max-h-[92vh] bg-card rounded-t-3xl md:rounded-3xl border border-border overflow-hidden">
               <div className="relative">
-                {/* Image carousel */}
                 <div className="relative aspect-square bg-gradient-to-br from-primary/5 to-accent/5">
                   {(() => {
                     const allImages = [selectedProduct.image_url, ...((selectedProduct.images || []).map((img: any) => img.image_url))].filter(Boolean);
@@ -196,9 +328,9 @@ const StorePage = () => {
                       {currentImg ? <img src={currentImg} alt={selectedProduct.name} className="w-full h-full object-cover" /> : <Package className="w-16 h-16 text-muted-foreground/20 mx-auto mt-32" />}
                       {allImages.length > 1 && (
                         <>
-                          <button onClick={e => { e.stopPropagation(); setActiveImgIdx(i => (i - 1 + allImages.length) % allImages.length); }}
+                          <button onClick={e => { e.stopPropagation(); setActiveImgIdx(ii => (ii - 1 + allImages.length) % allImages.length); }}
                             className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white"><ChevronLeft className="w-4 h-4" /></button>
-                          <button onClick={e => { e.stopPropagation(); setActiveImgIdx(i => (i + 1) % allImages.length); }}
+                          <button onClick={e => { e.stopPropagation(); setActiveImgIdx(ii => (ii + 1) % allImages.length); }}
                             className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white"><ChevronRight className="w-4 h-4" /></button>
                           <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
                             {allImages.map((_: string, j: number) => <div key={j} className={`w-2 h-2 rounded-full ${j === activeImgIdx ? 'bg-white' : 'bg-white/40'}`} />)}
@@ -223,7 +355,6 @@ const StorePage = () => {
                 </div>
                 {selectedProduct.description && <p className="text-sm text-muted-foreground leading-relaxed">{selectedProduct.description}</p>}
 
-                {/* Product Reviews */}
                 {productReviews.length > 0 && (
                   <div className="space-y-2 pt-2 border-t border-border">
                     <p className="text-sm font-semibold text-foreground">Reviews ({productReviews.length})</p>
@@ -237,7 +368,6 @@ const StorePage = () => {
                   </div>
                 )}
 
-                {/* Review Form Toggle */}
                 {!showReviewForm ? (
                   <button onClick={() => setShowReviewForm(true)} className="w-full py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold flex items-center justify-center gap-2">
                     <MessageSquare className="w-4 h-4" /> Write a Review
