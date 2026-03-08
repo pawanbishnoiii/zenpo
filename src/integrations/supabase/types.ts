@@ -155,6 +155,54 @@ export type Database = {
         }
         Relationships: []
       }
+      email_notifications: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          id: string
+          invoice_id: string | null
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_notifications_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gallery_products: {
         Row: {
           barcode_value: string | null
@@ -168,6 +216,7 @@ export type Database = {
           name: string
           price: number
           sku: string
+          store_category: string
           tax_percent: number
         }
         Insert: {
@@ -182,6 +231,7 @@ export type Database = {
           name: string
           price?: number
           sku: string
+          store_category?: string
           tax_percent?: number
         }
         Update: {
@@ -196,6 +246,7 @@ export type Database = {
           name?: string
           price?: number
           sku?: string
+          store_category?: string
           tax_percent?: number
         }
         Relationships: []
@@ -518,6 +569,48 @@ export type Database = {
           name?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      smtp_settings: {
+        Row: {
+          created_at: string
+          encryption: string
+          from_email: string
+          from_name: string
+          host: string
+          id: string
+          is_active: boolean
+          password: string
+          port: number
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          encryption?: string
+          from_email?: string
+          from_name?: string
+          host?: string
+          id?: string
+          is_active?: boolean
+          password?: string
+          port?: number
+          updated_at?: string
+          username?: string
+        }
+        Update: {
+          created_at?: string
+          encryption?: string
+          from_email?: string
+          from_name?: string
+          host?: string
+          id?: string
+          is_active?: boolean
+          password?: string
+          port?: number
+          updated_at?: string
+          username?: string
         }
         Relationships: []
       }
