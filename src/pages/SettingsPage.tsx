@@ -159,7 +159,7 @@ const SettingsPage = () => {
         title: 'Business',
         items: [
           { key: 'business' as SettingsPanel, icon: Store, label: 'Business Profile', desc: 'Name, GST, address, store link' },
-          { key: 'store_design' as SettingsPanel, icon: Paintbrush, label: 'Design Store', desc: 'Store page theme & appearance' },
+          { key: 'store_design' as SettingsPanel, icon: Paintbrush, label: 'Store', desc: 'Customize your public store page' },
           { key: 'printer' as SettingsPanel, icon: Printer, label: 'Printer & Devices', desc: 'Printer brand, model, connection' },
           { key: 'theme' as SettingsPanel, icon: Palette, label: 'Dashboard Theme', desc: 'Colors and appearance' },
         ],
@@ -282,24 +282,50 @@ const SettingsPage = () => {
 
           {activePanel === 'store_design' && (
             <div className="space-y-4">
-              <p className="text-sm text-foreground font-semibold">Choose Store Page Theme</p>
-              <p className="text-xs text-muted-foreground">This theme applies to your public store page that customers see.</p>
-              <div className="space-y-2">
-                {STORE_THEME_OPTIONS.map(t => (
-                  <button key={t.id} onClick={() => setSelectedStoreTheme(t.id)}
-                    className={`w-full p-3 rounded-xl border-2 text-left flex items-center gap-3 transition-colors ${selectedStoreTheme === t.id ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
-                    <span className="text-2xl">{t.emoji}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">{t.label}</p>
-                      <p className="text-xs text-muted-foreground">{t.desc}</p>
-                    </div>
-                    {selectedStoreTheme === t.id && <Check className="w-4 h-4 text-primary" />}
-                  </button>
-                ))}
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-3">
+                <p className="text-sm font-semibold text-foreground">🎨 Customize Your Store</p>
+                <p className="text-xs text-muted-foreground mt-1">Your store auto-uses your business category theme. Choose a custom override below.</p>
               </div>
+
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Theme Override</p>
+                <div className="space-y-2">
+                  {STORE_THEME_OPTIONS.map(t => (
+                    <button key={t.id} onClick={() => setSelectedStoreTheme(t.id)}
+                      className={`w-full p-3 rounded-xl border-2 text-left flex items-center gap-3 transition-colors ${selectedStoreTheme === t.id ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
+                      <span className="text-2xl">{t.emoji}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">{t.label}</p>
+                        <p className="text-xs text-muted-foreground">{t.desc}</p>
+                      </div>
+                      {selectedStoreTheme === t.id && <Check className="w-4 h-4 text-primary" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Store Features</p>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Show Products', desc: 'Display product catalog', enabled: true },
+                    { label: 'Show Reviews', desc: 'Customer reviews section', enabled: true },
+                    { label: 'Show Contact', desc: 'Contact information section', enabled: true },
+                    { label: 'Show Offers', desc: 'Active offers & discounts', enabled: true },
+                  ].map(f => (
+                    <div key={f.label} className="flex items-center justify-between p-3 rounded-xl bg-secondary">
+                      <div><p className="text-sm text-foreground">{f.label}</p><p className="text-[10px] text-muted-foreground">{f.desc}</p></div>
+                      <div className={`w-10 h-6 rounded-full relative ${f.enabled ? 'bg-success' : 'bg-muted'}`}>
+                        <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${f.enabled ? 'right-0.5' : 'left-0.5'}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <motion.button whileTap={{ scale: 0.97 }} onClick={handleSaveStoreTheme} disabled={savingStoreTheme}
                 className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
-                {savingStoreTheme ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paintbrush className="w-4 h-4" />} Save Store Theme
+                {savingStoreTheme ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paintbrush className="w-4 h-4" />} Save Store Settings
               </motion.button>
               {business?.store_slug && (
                 <button onClick={() => window.open(`${window.location.origin}/store/${business.store_slug}`, '_blank')}
