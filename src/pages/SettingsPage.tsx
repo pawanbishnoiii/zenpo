@@ -159,7 +159,7 @@ const SettingsPage = () => {
         title: 'Business',
         items: [
           { key: 'business' as SettingsPanel, icon: Store, label: 'Business Profile', desc: 'Name, GST, address, store link' },
-          { key: 'store_design' as SettingsPanel, icon: Paintbrush, label: 'Design Store', desc: 'Store page theme & appearance' },
+          { key: 'store_design' as SettingsPanel, icon: Paintbrush, label: 'Store', desc: 'Customize your public store page' },
           { key: 'printer' as SettingsPanel, icon: Printer, label: 'Printer & Devices', desc: 'Printer brand, model, connection' },
           { key: 'theme' as SettingsPanel, icon: Palette, label: 'Dashboard Theme', desc: 'Colors and appearance' },
         ],
