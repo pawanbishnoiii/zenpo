@@ -125,11 +125,25 @@ const Dashboard = () => {
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <StatCard title="Today Sales" value={`₹${stats.todaySales.toLocaleString()}`} icon={IndianRupee} trend={stats.todaySales > 0 ? 'Live' : 'No sales'} trendUp={stats.todaySales > 0} gradient />
-        <StatCard title="Monthly Sales" value={`₹${(stats.monthlySales / 1000).toFixed(1)}K`} icon={TrendingUp} trend="This month" />
-        <StatCard title={categoryConfig?.navLabel.workspace === 'Services' ? 'Services' : categoryConfig?.navLabel.workspace === 'Menu' ? 'Menu Items' : 'Products'} value={stats.totalProducts.toString()} icon={Package} />
-        <StatCard title="Low Stock" value={stats.lowStock.toString()} icon={AlertTriangle} trend={stats.lowStock > 0 ? 'Attention' : 'Good'} />
+        <StatCard title="Today Sales" value={<AnimatedCounter value={stats.todaySales} prefix="₹" />} icon={IndianRupee} trend={stats.todaySales > 0 ? 'Live' : 'No sales'} trendUp={stats.todaySales > 0} gradient />
+        <StatCard title="Monthly Sales" value={<AnimatedCounter value={Math.round(stats.monthlySales / 1000)} prefix="₹" />} icon={TrendingUp} trend="This month (K)" />
+        <StatCard title={categoryConfig?.navLabel.workspace === 'Services' ? 'Services' : categoryConfig?.navLabel.workspace === 'Menu' ? 'Menu Items' : 'Products'} value={<AnimatedCounter value={stats.totalProducts} />} icon={Package} />
+        <StatCard title="Low Stock" value={<AnimatedCounter value={stats.lowStock} />} icon={AlertTriangle} trend={stats.lowStock > 0 ? 'Attention' : 'Good'} />
       </div>
+
+      {/* WhatsApp & Share row */}
+      {storeUrl && (
+        <div className="flex gap-2">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleWhatsAppShare}
+            className="flex-1 py-2.5 rounded-xl bg-green-500/10 text-green-600 text-xs font-semibold flex items-center justify-center gap-2">
+            <MessageCircle className="w-4 h-4" /> Share on WhatsApp
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => { navigator.clipboard.writeText(storeUrl); toast({ title: 'Link copied!' }); }}
+            className="py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-2">
+            <Share2 className="w-4 h-4" /> Copy Link
+          </motion.button>
+        </div>
+      )
 
       {/* Quick Stats Row */}
       <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4">
