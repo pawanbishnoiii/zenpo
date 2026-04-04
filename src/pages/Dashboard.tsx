@@ -85,9 +85,16 @@ const Dashboard = () => {
       { icon: Tag, label: 'Offers', desc: 'Discounts & coupons', path: '/offers' },
       { icon: BarChart3, label: 'Reports', desc: 'Analytics', path: '/reports' },
       { icon: Globe, label: 'Store', desc: 'Public page', path: storeUrl ? `/store/${business?.store_slug}` : '/settings' },
+      { icon: Palette, label: 'Store Manager', desc: 'Customize store', path: '/store-manager' },
       { icon: Settings, label: 'Settings', desc: 'Configuration', path: '/settings' },
     ];
     return base;
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!storeUrl) return;
+    const text = `Check out ${business?.business_name}: ${storeUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   return (
