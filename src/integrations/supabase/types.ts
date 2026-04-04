@@ -614,6 +614,72 @@ export type Database = {
         }
         Relationships: []
       }
+      store_content: {
+        Row: {
+          business_id: string
+          content: string | null
+          created_at: string
+          id: string
+          is_visible: boolean | null
+          section_key: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          section_key?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          section_key?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_media: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          media_type: string
+          sort_order: number | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          media_type?: string
+          sort_order?: number | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          media_type?: string
+          sort_order?: number | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

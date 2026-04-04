@@ -1,19 +1,40 @@
-import { motion } from 'framer-motion';
-import { IndianRupee, Package, TrendingUp, AlertTriangle, LogOut, Shield, Receipt, Users, Tag, BarChart3, Settings, Globe, ExternalLink, Palette } from 'lucide-react';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { IndianRupee, Package, TrendingUp, AlertTriangle, LogOut, Shield, Receipt, Users, Tag, BarChart3, Settings, Globe, ExternalLink, Palette, MessageCircle, QrCode, Share2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import StatCard from '@/components/dashboard/StatCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness } from '@/hooks/useBusiness';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCategoryConfig } from '@/lib/categoryConfig';
+import { useToast } from '@/hooks/use-toast';
+
+// Animated counter component
+const AnimatedCounter = ({ value, prefix = '' }: { value: number; prefix?: string }) => {
+  const [displayed, setDisplayed] = useState(0);
+  useEffect(() => {
+    const duration = 800;
+    const start = Date.now();
+    const startVal = displayed;
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayed(Math.round(startVal + (value - startVal) * eased));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [value]);
+  return <span>{prefix}{displayed.toLocaleString()}</span>;
+};
 
 const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
   const { business } = useBusiness();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [stats, setStats] = useState({ todaySales: 0, monthlySales: 0, totalProducts: 0, lowStock: 0, totalCustomers: 0, totalInvoices: 0, activeOffers: 0 });
   const [revenueData, setRevenueData] = useState<any[]>([]);
 
@@ -66,9 +87,16 @@ const Dashboard = () => {
       { icon: Tag, label: 'Offers', desc: 'Discounts & coupons', path: '/offers' },
       { icon: BarChart3, label: 'Reports', desc: 'Analytics', path: '/reports' },
       { icon: Globe, label: 'Store', desc: 'Public page', path: storeUrl ? `/store/${business?.store_slug}` : '/settings' },
+      { icon: Palette, label: 'Store Manager', desc: 'Customize store', path: '/store-manager' },
       { icon: Settings, label: 'Settings', desc: 'Configuration', path: '/settings' },
     ];
     return base;
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!storeUrl) return;
+    const text = `Check out ${business?.business_name}: ${storeUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   return (
@@ -105,7 +133,19 @@ const Dashboard = () => {
         <StatCard title="Low Stock" value={stats.lowStock.toString()} icon={AlertTriangle} trend={stats.lowStock > 0 ? 'Attention' : 'Good'} />
       </div>
 
-      {/* Quick Stats Row */}
+      {/* WhatsApp & Share row */}
+      {storeUrl && (
+        <div className="flex gap-2">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleWhatsAppShare}
+            className="flex-1 py-2.5 rounded-xl bg-success/10 text-success text-xs font-semibold flex items-center justify-center gap-2">
+            <MessageCircle className="w-4 h-4" /> Share on WhatsApp
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => { navigator.clipboard.writeText(storeUrl); toast({ title: 'Link copied!' }); }}
+            className="py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-2">
+            <Share2 className="w-4 h-4" /> Copy Link
+          </motion.button>
+        </div>
+      )}
       <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4">
         {[
           { label: categoryConfig?.navLabel.customers || 'Customers', value: stats.totalCustomers, icon: Users, color: 'text-success' },

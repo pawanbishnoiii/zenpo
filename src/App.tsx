@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AppLayout from "@/components/layout/AppLayout";
+import AdminLayout from "@/components/admin/AdminLayout";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -20,6 +21,7 @@ import BillHistory from "@/pages/BillHistory";
 import CustomerManagement from "@/pages/CustomerManagement";
 import OffersPage from "@/pages/OffersPage";
 import StorePage from "@/pages/StorePage";
+import StoreManager from "@/pages/StoreManager";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,7 +47,10 @@ const App = () => (
             <Route path="/history" element={<ProtectedRoute requireBusiness><AppLayout><BillHistory /></AppLayout></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute requireBusiness><AppLayout><CustomerManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/offers" element={<ProtectedRoute requireBusiness><AppLayout><OffersPage /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute adminOnly><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/store-manager" element={<ProtectedRoute requireBusiness><AppLayout><StoreManager /></AppLayout></ProtectedRoute>} />
+            {/* Admin routes with separate layout */}
+            <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/*" element={<ProtectedRoute adminOnly><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
