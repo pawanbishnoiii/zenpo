@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
-import { IndianRupee, Package, TrendingUp, AlertTriangle, LogOut, Shield, Receipt, Users, Tag, BarChart3, Settings, Globe, ExternalLink, Palette } from 'lucide-react';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { IndianRupee, Package, TrendingUp, AlertTriangle, LogOut, Shield, Receipt, Users, Tag, BarChart3, Settings, Globe, ExternalLink, Palette, MessageCircle, QrCode, Share2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import StatCard from '@/components/dashboard/StatCard';
 import { useAuth } from '@/hooks/useAuth';
