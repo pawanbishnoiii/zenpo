@@ -208,17 +208,36 @@ const AdminDashboard = () => {
     { id: 'analytics', label: 'Analytics', icon: Activity },
   ];
 
+  // Derive active tab from URL path for admin sub-routes
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.includes('/admin/gallery')) setActiveTab('gallery');
+    else if (path.includes('/admin/stores') || path.includes('/admin/businesses')) setActiveTab('businesses');
+    else if (path.includes('/admin/users')) setActiveTab('users');
+    else if (path.includes('/admin/smtp')) setActiveTab('smtp');
+    else if (path.includes('/admin/alerts')) setActiveTab('notifications');
+    else if (path.includes('/admin/features')) setActiveTab('features');
+    else if (path.includes('/admin/analytics')) setActiveTab('analytics');
+    else if (path.includes('/admin/subscriptions')) setActiveTab('overview');
+    else setActiveTab('overview');
+  }, []);
+
+  const handleTabClick = (tabId: AdminTab) => {
+    setActiveTab(tabId);
+    const pathMap: Record<AdminTab, string> = {
+      overview: '/admin', gallery: '/admin/gallery', businesses: '/admin/stores',
+      users: '/admin/users', smtp: '/admin/smtp', notifications: '/admin/alerts',
+      features: '/admin/features', analytics: '/admin/analytics',
+    };
+    navigate(pathMap[tabId] || '/admin');
+  };
+
   return (
-    <div className="px-4 pt-4 lg:pl-24 max-w-5xl mx-auto space-y-5 pb-24">
+    <div className="px-4 pt-4 max-w-5xl mx-auto space-y-5 pb-24">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/settings')} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
-            <ArrowLeft className="w-4 h-4 text-foreground" />
-          </motion.button>
-          <div>
-            <h1 className="text-2xl font-bold font-display text-foreground">Admin Panel</h1>
-            <p className="text-xs text-muted-foreground">Platform management • Super Admin</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground">Ezo Admin</h1>
+          <p className="text-xs text-muted-foreground">Platform management • Super Admin</p>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10">
           <Shield className="w-3.5 h-3.5 text-destructive" /><span className="text-xs font-bold text-destructive">Admin</span>
@@ -230,7 +249,7 @@ const AdminDashboard = () => {
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            <button key={tab.id} onClick={() => handleTabClick(tab.id)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${activeTab === tab.id ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
               <Icon className="w-3.5 h-3.5" /> {tab.label}
             </button>
