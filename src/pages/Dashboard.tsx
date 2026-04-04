@@ -33,6 +33,7 @@ const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
   const { business } = useBusiness();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [stats, setStats] = useState({ todaySales: 0, monthlySales: 0, totalProducts: 0, lowStock: 0, totalCustomers: 0, totalInvoices: 0, activeOffers: 0 });
   const [revenueData, setRevenueData] = useState<any[]>([]);
 
