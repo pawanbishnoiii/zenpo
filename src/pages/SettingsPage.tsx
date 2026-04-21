@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { DASHBOARD_THEMES, type DashboardThemeKey, PRINTER_BRANDS } from '@/lib/categoryConfig';
 import { getCategoryConfig } from '@/lib/categoryConfig';
+import { useIsMobile } from '@/hooks/use-mobile';
+import DesktopSettingsLayout from '@/components/settings/DesktopSettingsLayout';
 
 type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | 'store_design' | 'reviews' | null;
 
@@ -27,6 +29,7 @@ const SettingsPage = () => {
   const { business, refetch } = useBusiness();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [activePanel, setActivePanel] = useState<SettingsPanel>(null);
   const [connecting, setConnecting] = useState(false);
 
@@ -191,6 +194,18 @@ const SettingsPage = () => {
     }
     return groups;
   }, [user?.email, isAdmin, categoryConfig]);
+
+  // Desktop two-panel layout
+  if (!isMobile) {
+    return (
+      <DesktopSettingsLayout fallbackContent={(sectionId) => (
+        <div className="rounded-2xl glass-card p-6 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground mb-2">Coming Soon</p>
+          <p>The <strong>{sectionId}</strong> panel is being built. For now, use the mobile layout or quick links in the sidebar to manage these settings.</p>
+        </div>
+      )} />
+    );
+  }
 
   return (
     <div className="px-4 pt-4 lg:pl-24 max-w-2xl mx-auto space-y-6 pb-24">
