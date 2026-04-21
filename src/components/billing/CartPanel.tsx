@@ -147,13 +147,23 @@ const CartPanel = () => {
       }
 
       if (customerId) {
-        const { data: cs } = await supabase.from('customers').select('visit_count,total_spent').eq('id', customerId).maybeSingle();
+        const { data: cs } = await supabase.from('customers').select('visit_count,total_spent,credit_balance').eq('id', customerId).maybeSingle();
         if (cs) {
+          const newCredit = paymentMethod === 'credit'
+            ? Number(cs.credit_balance || 0) + grandTotal
+            : Number(cs.credit_balance || 0);
           await supabase.from('customers').update({
-            visit_count: Number(cs.visit_count || 0) + 1, total_spent: Number(cs.total_spent || 0) + grandTotal,
-            last_visit_at: new Date().toISOString(), vehicle_type: vehicleType || undefined,
+            visit_count: Number(cs.visit_count || 0) + 1,
+            total_spent: Number(cs.total_spent || 0) + grandTotal,
+            credit_balance: newCredit,
+            last_visit_at: new Date().toISOString(),
+            vehicle_type: vehicleType || undefined,
           }).eq('id', customerId);
         }
+      } else if (paymentMethod === 'credit') {
+        toast({ title: 'Customer required for Udhar', description: 'Add customer details for credit billing.', variant: 'destructive' });
+        setSaving(false);
+        return;
       }
 
       setShowInvoice(true);
