@@ -48,11 +48,11 @@ const CartPanel = () => {
     { id: 'cod', label: 'COD', icon: FileText },
   ];
 
-  // Customer search
+  // Customer search (with credit_balance, visit_count for live udhar display)
   useEffect(() => {
     if (!business || customerPhone.length < 3) { setSuggestions([]); return; }
     const timer = setTimeout(async () => {
-      const { data } = await supabase.from('customers').select('full_name, phone, email, vehicle_number, vehicle_type')
+      const { data } = await supabase.from('customers').select('id, full_name, phone, email, vehicle_number, vehicle_type, credit_balance, visit_count')
         .eq('business_id', business.id).or(`phone.ilike.%${customerPhone}%,full_name.ilike.%${customerPhone}%`).limit(5);
       setSuggestions(data || []);
       setShowSuggestions((data || []).length > 0);
@@ -66,6 +66,7 @@ const CartPanel = () => {
     setCustomerEmail(c.email || '');
     setVehicleNumber(c.vehicle_number || '');
     setVehicleType(c.vehicle_type || '');
+    setSelectedCustomer(c);
     setShowSuggestions(false);
   };
 
