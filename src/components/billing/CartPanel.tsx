@@ -281,19 +281,38 @@ const CartPanel = () => {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer (Optional)</p>
               <div className="relative">
                 <input type="text" placeholder="Search by name or phone..." value={customerPhone || customerName}
-                  onChange={e => { const v = e.target.value; if (/^\d/.test(v)) setCustomerPhone(v); else { setCustomerName(v); setCustomerPhone(''); } }}
+                  onChange={e => { const v = e.target.value; if (/^\d/.test(v)) setCustomerPhone(v); else { setCustomerName(v); setCustomerPhone(''); } setSelectedCustomer(null); }}
                   className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-elevated overflow-hidden">
                     {suggestions.map((s, i) => (
                       <button key={i} onClick={() => selectCustomer(s)} className="w-full flex items-center gap-2 p-2.5 text-left hover:bg-muted/50 text-sm">
                         <UserCheck className="w-4 h-4 text-primary shrink-0" />
-                        <div className="min-w-0"><p className="font-semibold text-foreground truncate">{s.full_name}</p><p className="text-xs text-muted-foreground">{s.phone} {s.vehicle_number ? `• ${s.vehicle_number}` : ''}</p></div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-foreground truncate">{s.full_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{s.phone} {s.vehicle_number ? `• ${s.vehicle_number}` : ''} • {Number(s.visit_count || 0)} visits</p>
+                        </div>
+                        {Number(s.credit_balance || 0) > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/15 text-warning">Udhar ₹{Number(s.credit_balance).toFixed(0)}</span>
+                        )}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
+
+              {/* Live customer summary */}
+              {selectedCustomer && (
+                <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl bg-primary/5 border border-primary/20 p-2.5 flex items-center gap-2 text-xs">
+                  <span className="font-semibold text-foreground">{selectedCustomer.full_name}</span>
+                  <span className="text-muted-foreground">• {Number(selectedCustomer.visit_count || 0) + 1}{['st','nd','rd'][((Number(selectedCustomer.visit_count || 0)+1)-1)%10] || 'th'} visit</span>
+                  {Number(selectedCustomer.credit_balance || 0) > 0 && (
+                    <span className="ml-auto px-2 py-0.5 rounded-full bg-warning/15 text-warning font-bold">Udhar ₹{Number(selectedCustomer.credit_balance).toFixed(0)}</span>
+                  )}
+                </motion.div>
+              )}
+
               {(customerPhone || customerName) && (
                 <>
                   <input type="text" placeholder="Customer Name" value={customerName} onChange={e => setCustomerName(e.target.value)}
@@ -304,11 +323,8 @@ const CartPanel = () => {
                     <input type="text" placeholder="Vehicle #" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value.toUpperCase())}
                       className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
-                  <select value={vehicleType} onChange={e => setVehicleType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    <option value="">Vehicle Type (optional)</option>
-                    {VEHICLE_TYPES.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
+                  <input type="email" placeholder="Email (for Razorpay link)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </>
               )}
             </div>
@@ -322,29 +338,72 @@ const CartPanel = () => {
                 <button onClick={handleApplyCoupon} className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold">Apply</button>
               </div>
               {couponDiscount > 0 && <p className="text-xs text-success font-medium">Coupon applied: {couponDiscount}% off (−₹{couponAmount.toFixed(0)})</p>}
+
+              {/* Manual discount */}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs text-muted-foreground">Manual ₹ off:</span>
+                <input type="number" min={0} value={manualDiscount || ''} onChange={e => setManualDiscount(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-24 px-2 py-1 rounded-lg bg-background border border-border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30" />
+              </div>
             </div>
           </>
         )}
       </div>
 
       {cart.length > 0 && (
-        <div className="border-t border-border p-4 space-y-3">
-          <div className="flex gap-2">
+        <div className="border-t border-border p-4 space-y-3 bg-card/40">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Payment Method</p>
+          <div className="grid grid-cols-3 gap-2">
             {paymentMethods.map(pm => {
               const Icon = pm.icon;
               return (
                 <motion.button key={pm.id} whileTap={{ scale: 0.95 }} onClick={() => setPaymentMethod(pm.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-colors ${paymentMethod === pm.id ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+                  className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-colors ${paymentMethod === pm.id ? 'gradient-primary text-primary-foreground shadow-soft' : 'bg-secondary text-secondary-foreground hover:bg-muted border border-border'}`}>
                   <Icon className="w-3.5 h-3.5" />{pm.label}
                 </motion.button>
               );
             })}
           </div>
-          <div className="space-y-1 text-sm">
+
+          {/* Razorpay link generator */}
+          <AnimatePresence>
+            {paymentMethod === 'razorpay' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
+                <p className="text-[11px] text-muted-foreground">Payment link will be generated and emailed to customer via Razorpay.</p>
+                {!razorpayLink ? (
+                  <button onClick={handleGenerateRazorpayLink} disabled={generatingLink || grandTotal <= 0}
+                    className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                    {generatingLink ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Generate Payment Link
+                  </button>
+                ) : (
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] text-success font-semibold">✓ Link ready</p>
+                    <a href={razorpayLink} target="_blank" rel="noopener" className="text-[11px] text-primary truncate block break-all">{razorpayLink}</a>
+                  </div>
+                )}
+              </motion.div>
+            )}
+            {paymentMethod === 'credit' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl bg-warning/10 border border-warning/30 p-2.5 text-xs text-foreground">
+                <span className="font-semibold">Udhar / Credit:</span> ₹{grandTotal.toFixed(0)} will be added to customer's outstanding balance.
+                {selectedCustomer && (
+                  <span className="block text-warning font-bold mt-1">New balance: ₹{(Number(selectedCustomer.credit_balance || 0) + grandTotal).toFixed(0)}</span>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="space-y-1 text-sm rounded-xl bg-background/50 p-2.5">
             <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
-            <div className="flex justify-between text-muted-foreground"><span>Tax</span><span>₹{taxTotal.toFixed(0)}</span></div>
+            {gstEnabled && <div className="flex justify-between text-muted-foreground"><span>GST</span><span>₹{taxTotal.toFixed(0)}</span></div>}
             {couponAmount > 0 && <div className="flex justify-between text-success"><span>Coupon</span><span>−₹{couponAmount.toFixed(0)}</span></div>}
-            <div className="flex justify-between text-base font-bold pt-1 border-t border-border text-foreground"><span>Total</span><span className="gradient-primary-text">₹{grandTotal.toFixed(0)}</span></div>
+            {manualDiscount > 0 && <div className="flex justify-between text-success"><span>Discount</span><span>−₹{manualDiscount.toFixed(0)}</span></div>}
+            <div className="flex justify-between text-lg font-bold pt-1 border-t border-border text-foreground">
+              <span>Total</span>
+              <motion.span key={grandTotal} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="gradient-primary-text">₹{grandTotal.toFixed(0)}</motion.span>
+            </div>
           </div>
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.95 }} onClick={clearCart} className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">Clear</motion.button>
