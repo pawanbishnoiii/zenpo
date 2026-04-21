@@ -85,8 +85,31 @@ const CartPanel = () => {
   };
 
   const generateInvoiceNumber = () => {
-    const prefix = (business?.category || 'ZP').substring(0, 2).toUpperCase();
+    const prefix = (business as any)?.invoice_prefix || (business?.category || 'ZP').substring(0, 2).toUpperCase();
     return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+  };
+
+  const handleGenerateRazorpayLink = async () => {
+    if (!business) return;
+    setGeneratingLink(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('razorpay-test', {
+        body: {
+          action: 'create_link',
+          business_id: business.id,
+          amount: grandTotal,
+          customer_email: customerEmail || undefined,
+          customer_name: customerName || undefined,
+          description: `Invoice payment to ${business.business_name}`,
+        },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Failed');
+      setRazorpayLink(data.short_url);
+      toast({ title: 'Payment link ready', description: 'Link generated successfully' });
+    } catch (e: any) {
+      toast({ title: 'Razorpay error', description: e.message || 'Configure Razorpay in Settings', variant: 'destructive' });
+    } finally { setGeneratingLink(false); }
   };
 
   const handleCharge = async () => {
