@@ -356,6 +356,45 @@ export type Database = {
           },
         ]
       }
+      payment_settings: {
+        Row: {
+          business_display_name: string
+          business_id: string
+          created_at: string
+          id: string
+          is_enabled: boolean
+          is_test_mode: boolean
+          payment_description: string
+          razorpay_key_id: string
+          razorpay_key_secret: string
+          updated_at: string
+        }
+        Insert: {
+          business_display_name?: string
+          business_id: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          is_test_mode?: boolean
+          payment_description?: string
+          razorpay_key_id?: string
+          razorpay_key_secret?: string
+          updated_at?: string
+        }
+        Update: {
+          business_display_name?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          is_test_mode?: boolean
+          payment_description?: string
+          razorpay_key_id?: string
+          razorpay_key_secret?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       printer_settings: {
         Row: {
           business_id: string

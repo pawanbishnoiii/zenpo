@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Search, ScanLine, ArrowLeft, ShoppingCart, X } from 'lucide-react';
+import { Search, ScanLine, ArrowLeft, ShoppingCart, X, Keyboard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ProductCard from '@/components/products/ProductCard';
 import CartPanel from '@/components/billing/CartPanel';
@@ -41,6 +41,17 @@ const Billing = () => {
     };
     fetchProducts();
   }, [business]);
+
+  // Desktop keyboard shortcuts
+  useEffect(() => {
+    if (isMobile) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'F2') { e.preventDefault(); document.getElementById('billing-search')?.focus(); }
+      if (e.key === 'Escape') { /* handled by clear in cart */ }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isMobile]);
 
   const allCategories = ['All', ...new Set(products.map(p => p.category))];
 
@@ -168,58 +179,87 @@ const Billing = () => {
     );
   }
 
-  // Desktop layout: products left, cart right (original)
+  // ─────────────────────────────────────────────────────────────────────────
+  // DESKTOP LAYOUT — POS terminal style: 60% products / 40% cart
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen flex flex-row">
-      <div className="flex-1 flex flex-col">
-        <div className="px-4 pt-4 space-y-3">
+    <div className="h-screen flex flex-row bg-background">
+      {/* LEFT — Products / Services selector (60%) */}
+      <div className="flex-1 flex flex-col min-w-0" style={{ flex: '1 1 60%' }}>
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-6 lg:pl-24 pt-5 pb-3 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/dashboard')} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
+              <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/dashboard')} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center hover:bg-muted transition-colors">
                 <ArrowLeft className="w-4 h-4 text-foreground" />
               </motion.button>
-              <motion.h1 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-bold font-display text-foreground">{categoryConfig?.navLabel.billing || 'Billing'}</motion.h1>
+              <div>
+                <motion.h1 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-bold font-display text-foreground">
+                  Ezo POS — {categoryConfig?.navLabel.billing || 'Billing'}
+                </motion.h1>
+                <p className="text-xs text-muted-foreground hidden lg:flex items-center gap-3 mt-0.5">
+                  <span className="flex items-center gap-1"><Keyboard className="w-3 h-3" /> Shortcuts:</span>
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">F2</kbd> Search
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">F4</kbd> Charge
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Esc</kbd> Clear
+                </p>
+              </div>
             </div>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowScanner(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold glow-primary">
-              <ScanLine className="w-4 h-4" /> Scan
+            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.02 }} onClick={() => setShowScanner(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold glow-primary cursor-pointer">
+              <ScanLine className="w-4 h-4" /> Scan Barcode
             </motion.button>
           </div>
+
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input type="text" placeholder="Search product or scan barcode..." value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input id="billing-search" type="text" placeholder="Search by name, SKU, or barcode...  (F2)" value={search} onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {allCategories.map((cat) => (
               <motion.button key={cat} whileTap={{ scale: 0.95 }} onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === cat ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${activeCategory === cat ? 'gradient-primary text-primary-foreground shadow-soft' : 'bg-secondary text-secondary-foreground hover:bg-muted'}`}>
                 {cat}
               </motion.button>
             ))}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4">
+
+        {/* Product Grid */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-6 lg:pl-24">
           {products.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <p className="text-sm">No products found</p>
               <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/workspace')}
-                className="mt-4 px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold">
+                className="mt-4 px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold cursor-pointer">
                 Add Products
               </motion.button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} onAdd={addToCart} />
+                <motion.div key={product.id} whileHover={{ scale: 1.02, y: -2 }} transition={{ type: 'spring', stiffness: 300 }} className="cursor-pointer">
+                  <ProductCard product={product} onAdd={addToCart} />
+                </motion.div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Footer counter */}
+        <div className="px-6 lg:pl-24 py-2 border-t border-border bg-card/50 text-xs text-muted-foreground flex items-center justify-between">
+          <span>{filteredProducts.length} of {products.length} items shown</span>
+          <span className="font-mono">Ezo POS Terminal</span>
+        </div>
       </div>
-      <div className="w-96 border-l border-border bg-card flex flex-col">
+
+      {/* RIGHT — Cart & Checkout (40%) */}
+      <div className="border-l border-border bg-muted/30 flex flex-col shadow-elevated" style={{ flex: '1 1 40%', maxWidth: '480px', minWidth: '380px' }}>
         <CartPanel />
       </div>
+
       <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={handleBarcodeScan} />
     </div>
   );
