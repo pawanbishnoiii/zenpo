@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { DASHBOARD_THEMES, type DashboardThemeKey, PRINTER_BRANDS } from '@/lib/categoryConfig';
 import { getCategoryConfig } from '@/lib/categoryConfig';
+import { useIsMobile } from '@/hooks/use-mobile';
+import DesktopSettingsLayout from '@/components/settings/DesktopSettingsLayout';
 
 type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | 'store_design' | 'reviews' | null;
 
@@ -27,6 +29,7 @@ const SettingsPage = () => {
   const { business, refetch } = useBusiness();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [activePanel, setActivePanel] = useState<SettingsPanel>(null);
   const [connecting, setConnecting] = useState(false);
 
