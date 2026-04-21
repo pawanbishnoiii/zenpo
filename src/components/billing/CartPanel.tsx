@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, CreditCard, Wallet, Link2, BookOpen } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +23,10 @@ const CartPanel = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [razorpayLink, setRazorpayLink] = useState<string>('');
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [manualDiscount, setManualDiscount] = useState(0);
   const [printer, setPrinter] = useState<PrinterConnection>({ device: null, characteristic: null, connected: false });
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -30,15 +34,18 @@ const CartPanel = () => {
   const { business } = useBusiness();
   const { toast } = useToast();
 
+  const gstEnabled = (business as any)?.gst_enabled !== false;
   const subtotal = cart.reduce((sum, item) => sum + item.product.discountPrice * item.quantity, 0);
-  const taxTotal = cart.reduce((sum, item) => sum + (item.product.discountPrice * item.quantity * item.product.taxPercent) / 100, 0);
+  const taxTotal = gstEnabled ? cart.reduce((sum, item) => sum + (item.product.discountPrice * item.quantity * item.product.taxPercent) / 100, 0) : 0;
   const couponAmount = couponDiscount > 0 ? (subtotal * couponDiscount) / 100 : 0;
-  const grandTotal = subtotal + taxTotal - couponAmount;
+  const grandTotal = Math.max(0, subtotal + taxTotal - couponAmount - manualDiscount);
 
   const paymentMethods = [
     { id: 'cash', label: 'Cash', icon: Banknote },
-    { id: 'cod', label: 'COD', icon: FileText },
     { id: 'upi', label: 'UPI', icon: Smartphone },
+    { id: 'razorpay', label: 'Razorpay', icon: Link2 },
+    { id: 'credit', label: 'Udhar', icon: BookOpen },
+    { id: 'cod', label: 'COD', icon: FileText },
   ];
 
   // Customer search
