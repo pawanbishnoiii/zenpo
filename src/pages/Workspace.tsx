@@ -84,7 +84,7 @@ const Workspace = () => {
   };
 
   return (
-    <div className="px-4 pt-4 lg:pl-24 max-w-5xl mx-auto space-y-4 pb-24">
+    <div className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6 lg:pl-24 max-w-7xl mx-auto space-y-4 md:space-y-6 pb-24">
       <PageHeader title={categoryConfig?.navLabel.workspace || 'Workspace'} backTo="/dashboard" actions={
         <div className="flex items-center gap-1.5 flex-wrap">
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowScanner(true)}
