@@ -128,46 +128,51 @@ const Workspace = () => {
       </div>
 
       {/* Product grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
         {filteredProducts.map(product => {
           const imgSrc = getImageSrc(product.imageUrl);
           const hasDiscount = product.discountPrice < product.price;
           return (
             <motion.div key={product.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              className="rounded-2xl glass-card shadow-soft overflow-hidden group">
-              <div className="aspect-[2.5/1] bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center relative overflow-hidden">
-                {imgSrc ? <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-muted-foreground/30" />}
+              whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300 }}
+              className="rounded-2xl glass-card shadow-soft overflow-hidden group hover:shadow-elevated transition-shadow cursor-pointer">
+              <div className="aspect-[2.5/1] md:aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center relative overflow-hidden">
+                {imgSrc ? <img src={imgSrc} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <Package className="w-8 h-8 md:w-12 md:h-12 text-muted-foreground/30" />}
                 {hasDiscount && <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground">{Math.round(((product.price - product.discountPrice) / product.price) * 100)}% OFF</span>}
-                {product.stock < 20 && <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning text-warning-foreground">Low Stock</span>}
+                {product.stock < 20 && <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning text-warning-foreground">{product.stock === 0 ? 'Out of Stock' : 'Low Stock'}</span>}
               </div>
-              <div className="p-3 space-y-2">
-                <div className="flex items-start justify-between">
+              <div className="p-3 md:p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate text-foreground">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">{product.category} • {product.sku}</p>
+                    <p className="text-sm md:text-base font-semibold truncate text-foreground">{product.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{product.category} • {product.sku}</p>
                     {(product as any).brandName && <p className="text-[10px] text-muted-foreground">{(product as any).brandName}</p>}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${product.stock === 0 ? 'bg-destructive' : product.stock < 20 ? 'bg-warning' : 'bg-success'}`} />
+                      <span className="text-[10px] text-muted-foreground">{product.stock === 0 ? 'Out of Stock' : product.stock < 20 ? 'Low Stock' : 'In Stock'} ({product.stock})</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-foreground">₹{product.discountPrice}</p>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm md:text-base font-bold text-foreground">₹{product.discountPrice}</p>
                     {hasDiscount && <p className="text-xs text-muted-foreground line-through">₹{product.price}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => setEditProduct(product)}
-                    className="flex-1 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-semibold flex items-center justify-center gap-1"><Pencil className="w-3 h-3" /> Edit</motion.button>
-                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => setSelectedBarcode(product)}
-                    className="py-1.5 px-2.5 rounded-lg bg-secondary text-secondary-foreground"><Barcode className="w-3.5 h-3.5" /></motion.button>
-                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => handleDelete(product.id)}
-                    className="py-1.5 px-2.5 rounded-lg bg-destructive/10 text-destructive"><Trash2 className="w-3.5 h-3.5" /></motion.button>
+                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => setEditProduct(product)} title="Edit product"
+                    className="flex-1 py-1.5 md:py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-semibold flex items-center justify-center gap-1 hover:bg-muted transition-colors"><Pencil className="w-3 h-3" /> <span className="hidden md:inline">Edit</span></motion.button>
+                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => setSelectedBarcode(product)} title="Print barcode"
+                    className="py-1.5 md:py-2 px-2.5 rounded-lg bg-secondary text-secondary-foreground hover:bg-muted transition-colors"><Barcode className="w-3.5 h-3.5" /></motion.button>
+                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => handleDelete(product.id)} title="Delete product"
+                    className="py-1.5 md:py-2 px-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"><Trash2 className="w-3.5 h-3.5" /></motion.button>
                 </div>
               </div>
             </motion.div>
           );
         })}
         {filteredProducts.length === 0 && (
-          <div className="col-span-full py-12 text-center">
-            <Package className="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground">{products.length === 0 ? 'No items yet. Add a product or pick from Gallery.' : 'No matching items'}</p>
+          <div className="col-span-full py-12 md:py-20 text-center">
+            <Package className="w-10 h-10 md:w-16 md:h-16 mx-auto text-muted-foreground/30 mb-2 md:mb-4" />
+            <p className="text-sm md:text-base text-muted-foreground">{products.length === 0 ? 'No items yet. Add a product or pick from Gallery.' : 'No matching items'}</p>
           </div>
         )}
       </div>
