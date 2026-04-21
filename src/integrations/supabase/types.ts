@@ -62,12 +62,17 @@ export type Database = {
           business_name: string
           category: string
           created_at: string
+          default_tax_percent: number
+          gst_enabled: boolean
           gst_number: string | null
           id: string
+          invoice_footer: string
+          invoice_prefix: string
           logo_url: string | null
           owner_id: string
           phone: string | null
           printer_type: string | null
+          razorpay_link_default: boolean
           store_slug: string | null
           store_theme: string | null
           theme: string | null
@@ -78,12 +83,17 @@ export type Database = {
           business_name: string
           category?: string
           created_at?: string
+          default_tax_percent?: number
+          gst_enabled?: boolean
           gst_number?: string | null
           id?: string
+          invoice_footer?: string
+          invoice_prefix?: string
           logo_url?: string | null
           owner_id: string
           phone?: string | null
           printer_type?: string | null
+          razorpay_link_default?: boolean
           store_slug?: string | null
           store_theme?: string | null
           theme?: string | null
@@ -94,12 +104,17 @@ export type Database = {
           business_name?: string
           category?: string
           created_at?: string
+          default_tax_percent?: number
+          gst_enabled?: boolean
           gst_number?: string | null
           id?: string
+          invoice_footer?: string
+          invoice_prefix?: string
           logo_url?: string | null
           owner_id?: string
           phone?: string | null
           printer_type?: string | null
+          razorpay_link_default?: boolean
           store_slug?: string | null
           store_theme?: string | null
           theme?: string | null
@@ -111,6 +126,7 @@ export type Database = {
         Row: {
           business_id: string
           created_at: string
+          credit_balance: number
           email: string | null
           full_name: string
           id: string
@@ -126,6 +142,7 @@ export type Database = {
         Insert: {
           business_id: string
           created_at?: string
+          credit_balance?: number
           email?: string | null
           full_name?: string
           id?: string
@@ -141,6 +158,7 @@ export type Database = {
         Update: {
           business_id?: string
           created_at?: string
+          credit_balance?: number
           email?: string | null
           full_name?: string
           id?: string
@@ -650,6 +668,36 @@ export type Database = {
           port?: number
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          business_id: string
+          created_at: string
+          full_name: string
+          id: string
+          last_active_at: string | null
+          pin: string
+          role: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          full_name: string
+          id?: string
+          last_active_at?: string | null
+          pin: string
+          role?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          last_active_at?: string | null
+          pin?: string
+          role?: string
         }
         Relationships: []
       }
