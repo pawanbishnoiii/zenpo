@@ -92,8 +92,7 @@ const Dashboard = () => {
           <motion.h1 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-bold font-display text-foreground">{business?.business_name || 'Dashboard'}</motion.h1>
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin && <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/admin')} className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center"><Shield className="w-4 h-4 text-destructive" /></motion.button>}
-          <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center"><LogOut className="w-4 h-4 text-foreground" /></motion.button>
+          <ProfileButton />
         </div>
       </div>
 
