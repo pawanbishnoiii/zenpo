@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion';
-import { Search, ScanLine, ArrowLeft, ShoppingCart, X, Keyboard } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, ScanLine, ArrowLeft, ShoppingCart, X, Keyboard, Package } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import ProductCard from '@/components/products/ProductCard';
 import CartPanel from '@/components/billing/CartPanel';
 import BarcodeScanner from '@/components/billing/BarcodeScanner';
@@ -18,11 +18,13 @@ const Billing = () => {
   const [showCart, setShowCart] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const { addToCart, cart } = useAppStore();
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const { addToCart, cart, clearCart } = useAppStore();
   const navigate = useNavigate();
   const { business } = useBusiness();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const categoryConfig = business ? getCategoryConfig(business.category) : null;
 
@@ -42,16 +44,38 @@ const Billing = () => {
     fetchProducts();
   }, [business]);
 
-  // Desktop keyboard shortcuts
+  // Desktop keyboard shortcuts: F2 search, F4 charge, Esc clear cart / close suggestions
   useEffect(() => {
     if (isMobile) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'F2') { e.preventDefault(); document.getElementById('billing-search')?.focus(); }
-      if (e.key === 'Escape') { /* handled by clear in cart */ }
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      const isTextField = tag === 'input' || tag === 'textarea';
+
+      if (e.key === 'F2') {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+        setShowSearchSuggestions(true);
+      }
+      if (e.key === 'F4') {
+        e.preventDefault();
+        // Trigger Charge button programmatically
+        const chargeBtn = document.getElementById('billing-charge-btn') as HTMLButtonElement | null;
+        if (chargeBtn && !chargeBtn.disabled) chargeBtn.click();
+        else toast({ title: 'Cart is empty', description: 'Add items to cart first.' });
+      }
+      if (e.key === 'Escape') {
+        if (showSearchSuggestions) { setShowSearchSuggestions(false); return; }
+        if (isTextField) return;
+        if (cart.length > 0) {
+          clearCart();
+          toast({ title: 'Cart cleared' });
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isMobile]);
+  }, [isMobile, cart.length, showSearchSuggestions, clearCart, toast]);
 
   const allCategories = ['All', ...new Set(products.map(p => p.category))];
 
@@ -213,8 +237,53 @@ const Billing = () => {
 
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input id="billing-search" type="text" placeholder="Search by name, SKU, or barcode...  (F2)" value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input
+              id="billing-search"
+              ref={searchRef}
+              type="text"
+              placeholder="Search by name, SKU, or barcode...  (F2)"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setShowSearchSuggestions(true); }}
+              onFocus={() => search && setShowSearchSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+              className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            {search && <button onClick={() => { setSearch(''); searchRef.current?.focus(); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted"><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+
+            {/* Live suggestions dropdown */}
+            <AnimatePresence>
+              {showSearchSuggestions && search.trim().length > 0 && filteredProducts.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute z-30 top-full left-0 right-0 mt-2 max-h-80 overflow-y-auto rounded-xl bg-card border border-border shadow-elevated"
+                >
+                  {filteredProducts.slice(0, 8).map((p) => (
+                    <button
+                      key={p.id}
+                      onMouseDown={(e) => { e.preventDefault(); addToCart(p); setSearch(''); setShowSearchSuggestions(false); searchRef.current?.focus(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/60 border-b border-border last:border-0 transition-colors"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                        {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" /> : <Package className="w-4 h-4 text-primary" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{p.category} • SKU {p.sku}{p.barcode ? ` • ${p.barcode}` : ''}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold gradient-primary-text">₹{p.discountPrice}</p>
+                        {p.price > p.discountPrice && <p className="text-[10px] text-muted-foreground line-through">₹{p.price}</p>}
+                      </div>
+                    </button>
+                  ))}
+                  {filteredProducts.length > 8 && (
+                    <p className="px-4 py-2 text-[11px] text-muted-foreground text-center bg-muted/30">{filteredProducts.length - 8} more results — keep typing</p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar">

@@ -407,7 +407,7 @@ const CartPanel = () => {
           </div>
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.95 }} onClick={clearCart} className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">Clear</motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={handleCharge} disabled={saving}
+            <motion.button id="billing-charge-btn" whileTap={{ scale: 0.95 }} onClick={handleCharge} disabled={saving || cart.length === 0}
               className="flex-[2] py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary flex items-center justify-center gap-2 disabled:opacity-50">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Charge ₹{grandTotal.toFixed(0)}
             </motion.button>

@@ -1,5 +1,6 @@
 // Razorpay credentials test + payment link creator
-// Public function (no JWT required since called from owner-authenticated UI with key from DB)
+// Uses admin-level RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env (global) by default,
+// falls back to per-business payment_settings row if env not configured.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -7,54 +8,69 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { action, business_id, amount, customer_email, customer_name, description } = await req.json();
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // 1) Prefer admin-level global keys
+    let keyId = Deno.env.get("RAZORPAY_KEY_ID") || "";
+    let keySecret = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
+    let isTestMode = keyId.startsWith("rzp_test_");
+    let descFallback = "Invoice payment";
+    let source: "admin" | "business" = "admin";
 
-    // Fetch payment settings
-    const { data: settings } = await supabase
-      .from("payment_settings")
-      .select("*")
-      .eq("business_id", business_id)
-      .maybeSingle();
-
-    if (!settings || !settings.razorpay_key_id || !settings.razorpay_key_secret) {
-      return new Response(JSON.stringify({ ok: false, error: "Razorpay not configured" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // 2) Fallback: load per-business keys
+    if (!keyId || !keySecret) {
+      if (!business_id) {
+        return json({ ok: false, error: "Razorpay not configured (missing admin keys and business_id)" }, 400);
+      }
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { data: settings } = await supabase
+        .from("payment_settings")
+        .select("*")
+        .eq("business_id", business_id)
+        .maybeSingle();
+      if (!settings || !settings.razorpay_key_id || !settings.razorpay_key_secret) {
+        return json({ ok: false, error: "Razorpay not configured. Ask admin to set keys or configure in Settings." }, 400);
+      }
+      keyId = settings.razorpay_key_id;
+      keySecret = settings.razorpay_key_secret;
+      isTestMode = !!settings.is_test_mode;
+      descFallback = settings.payment_description || descFallback;
+      source = "business";
     }
 
-    const auth = btoa(`${settings.razorpay_key_id}:${settings.razorpay_key_secret}`);
+    const auth = btoa(`${keyId}:${keySecret}`);
 
     if (action === "test") {
-      // Verify by listing payments (lightweight call)
       const r = await fetch("https://api.razorpay.com/v1/payments?count=1", {
         headers: { Authorization: `Basic ${auth}` },
       });
       if (!r.ok) {
         const t = await r.text();
-        return new Response(JSON.stringify({ ok: false, error: `Razorpay rejected keys: ${t.slice(0, 200)}` }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ ok: false, error: `Razorpay rejected keys: ${t.slice(0, 200)}`, source });
       }
-      return new Response(JSON.stringify({ ok: true, mode: settings.is_test_mode ? "test" : "live" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ ok: true, mode: isTestMode ? "test" : "live", source });
     }
 
     if (action === "create_link") {
+      if (!amount || Number(amount) <= 0) return json({ ok: false, error: "Invalid amount" }, 400);
       const body = {
         amount: Math.round(Number(amount) * 100),
         currency: "INR",
         accept_partial: false,
-        description: description || settings.payment_description || "Invoice payment",
+        description: description || descFallback,
         customer: { name: customer_name || "Customer", email: customer_email || undefined },
         notify: { email: !!customer_email, sms: false },
         reminder_enable: true,
@@ -66,21 +82,13 @@ Deno.serve(async (req) => {
       });
       const data = await r.json();
       if (!r.ok) {
-        return new Response(JSON.stringify({ ok: false, error: data?.error?.description || "Failed" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ ok: false, error: data?.error?.description || "Failed to create payment link", source });
       }
-      return new Response(JSON.stringify({ ok: true, short_url: data.short_url, id: data.id }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ ok: true, short_url: data.short_url, id: data.id, source, mode: isTestMode ? "test" : "live" });
     }
 
-    return new Response(JSON.stringify({ ok: false, error: "Unknown action" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ ok: false, error: "Unknown action" }, 400);
   } catch (e: any) {
-    return new Response(JSON.stringify({ ok: false, error: e.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ ok: false, error: e.message || "Server error" }, 500);
   }
 });

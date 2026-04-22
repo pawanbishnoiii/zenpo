@@ -201,7 +201,7 @@ const SettingsPage = () => {
       <DesktopSettingsLayout fallbackContent={(sectionId) => (
         <div className="rounded-2xl glass-card p-6 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground mb-2">Coming Soon</p>
-          <p>The <strong>{sectionId}</strong> panel is being built. For now, use the mobile layout or quick links in the sidebar to manage these settings.</p>
+          <p>The <strong>{sectionId}</strong> panel is being built. Use the mobile layout for full options.</p>
         </div>
       )} />
     );

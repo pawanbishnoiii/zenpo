@@ -1,37 +1,22 @@
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { IndianRupee, Package, TrendingUp, AlertTriangle, LogOut, Shield, Receipt, Users, Tag, BarChart3, Settings, Globe, ExternalLink, Palette, MessageCircle, QrCode, Share2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { IndianRupee, Package, TrendingUp, AlertTriangle, Shield, Receipt, Users, Tag, BarChart3, Settings, Globe, ExternalLink, Palette, MessageCircle, Share2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import StatCard from '@/components/dashboard/StatCard';
+import ProfileButton from '@/components/dashboard/ProfileButton';
+import GstAccountsCard from '@/components/dashboard/GstAccountsCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness } from '@/hooks/useBusiness';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCategoryConfig } from '@/lib/categoryConfig';
 import { useToast } from '@/hooks/use-toast';
 
-// Animated counter component
-const AnimatedCounter = ({ value, prefix = '' }: { value: number; prefix?: string }) => {
-  const [displayed, setDisplayed] = useState(0);
-  useEffect(() => {
-    const duration = 800;
-    const start = Date.now();
-    const startVal = displayed;
-    const tick = () => {
-      const elapsed = Date.now() - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayed(Math.round(startVal + (value - startVal) * eased));
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [value]);
-  return <span>{prefix}{displayed.toLocaleString()}</span>;
-};
+// (animated counter removed; using inline values)
 
 const Dashboard = () => {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { business } = useBusiness();
   const navigate = useNavigate();
   const { toast } = useToast();

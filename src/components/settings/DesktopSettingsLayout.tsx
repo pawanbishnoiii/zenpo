@@ -7,6 +7,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import RazorpayPanel from './RazorpayPanel';
 import GstInvoicePanel from './GstInvoicePanel';
+import PrintSettingsPanel from './PrintSettingsPanel';
+import NotificationsPanel from './NotificationsPanel';
+import StaffPanel from './StaffPanel';
+import DataBackupPanel from './DataBackupPanel';
 
 const SECTIONS = [
   { group: 'Setup', items: [
@@ -114,6 +118,10 @@ const DesktopSettingsLayout = ({ fallbackContent }: Props) => {
             </div>
             {active === 'razorpay' ? <RazorpayPanel />
               : active === 'gst' ? <GstInvoicePanel />
+              : active === 'printer' ? <PrintSettingsPanel />
+              : active === 'notifications' ? <NotificationsPanel />
+              : active === 'staff' ? <StaffPanel />
+              : active === 'data' ? <DataBackupPanel />
               : fallbackContent(active)}
           </motion.div>
         </div>
