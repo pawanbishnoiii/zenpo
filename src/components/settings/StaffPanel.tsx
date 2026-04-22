@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useBusiness } from '@/hooks/useBusiness';
 import { useToast } from '@/hooks/use-toast';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+dayjs.extend(relativeTime);
 
 interface Staff {
   id: string;
