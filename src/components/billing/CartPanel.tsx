@@ -239,6 +239,21 @@ const CartPanel = () => {
       playSound('cash');
       setShowInvoice(true);
       toast({ title: 'Invoice Created!', description: `${invNum} saved.` });
+
+      // Auto-send email receipt (best-effort, non-blocking) if customer email provided
+      if (customerEmail.trim()) {
+        supabase.functions.invoke('send-invoice-email', {
+          body: {
+            business_id: business.id, invoice_id: invoice.id, recipient: customerEmail.trim(),
+            business_name: business.business_name || 'Ezo POS', invoice_number: invNum, customer_name: customerName,
+            items: cart.map(i => ({ name: i.product.name, qty: i.quantity, price: i.product.discountPrice, total: i.product.discountPrice * i.quantity })),
+            subtotal, tax: taxTotal, discount: couponAmount + manualDiscount, total: grandTotal, payment_method: paymentMethod,
+            store_url: business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : undefined,
+          },
+        }).then(({ data, error }) => {
+          if (!error && data?.ok) toast({ title: 'Email sent ✓', description: customerEmail.trim() });
+        }).catch(() => { /* silent — admin SMTP may not be configured */ });
+      }
     } catch (err: any) {
       playSound('error');
       toast({ title: 'Error', description: err.message, variant: 'destructive' });

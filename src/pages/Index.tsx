@@ -162,11 +162,18 @@ const Index = () => {
               className="w-full sm:w-auto px-8 py-4 rounded-2xl gradient-primary text-primary-foreground font-bold text-sm glow-primary flex items-center justify-center gap-2 shadow-xl">
               Start Free Now <ChevronRight className="w-4 h-4" />
             </motion.button>
-            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
-              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-secondary text-secondary-foreground font-semibold text-sm flex items-center justify-center gap-2">
-              <Play className="w-4 h-4" /> Explore Features
-            </motion.button>
+            {latestRelease?.file_url ? (
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} onClick={handleDownload}
+                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-foreground text-background font-bold text-sm flex items-center justify-center gap-2 shadow-xl">
+                <Download className="w-4 h-4" /> Download App <span className="text-xs font-normal opacity-70">v{latestRelease.version} • {formatSize(latestRelease.file_size_bytes || 0)}</span>
+              </motion.button>
+            ) : (
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-secondary text-secondary-foreground font-semibold text-sm flex items-center justify-center gap-2">
+                <Play className="w-4 h-4" /> Explore Features
+              </motion.button>
+            )}
           </motion.div>
 
           {/* Platform Stats */}
