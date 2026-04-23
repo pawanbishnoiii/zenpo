@@ -40,6 +40,7 @@ const SettingsPage = () => {
   const [bizAddress, setBizAddress] = useState('');
   const [bizGst, setBizGst] = useState('');
   const [bizSlug, setBizSlug] = useState('');
+  const [bizUpi, setBizUpi] = useState('');
   const [bizPrinterType, setBizPrinterType] = useState('58mm');
   const [savingBiz, setSavingBiz] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
@@ -65,6 +66,7 @@ const SettingsPage = () => {
       setBizAddress(business.address || '');
       setBizGst(business.gst_number || '');
       setBizSlug(business.store_slug || '');
+      setBizUpi((business as any).upi_id || '');
       setBizPrinterType(business.printer_type || '58mm');
       setSelectedStoreTheme((business as any).store_theme || 'suspended');
     }
@@ -100,8 +102,9 @@ const SettingsPage = () => {
     setSavingBiz(true);
     const { error } = await supabase.from('businesses').update({
       business_name: bizName.trim(), phone: bizPhone.trim() || null, address: bizAddress.trim() || null,
-      gst_number: bizGst.trim() || null, store_slug: bizSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || null, printer_type: bizPrinterType,
-    }).eq('id', business.id);
+      gst_number: bizGst.trim() || null, store_slug: bizSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || null,
+      upi_id: bizUpi.trim() || null, printer_type: bizPrinterType,
+    } as any).eq('id', business.id);
     if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
     else { toast({ title: 'Saved!' }); refetch(); setActivePanel(null); }
     setSavingBiz(false);
@@ -279,6 +282,12 @@ const SettingsPage = () => {
                 <textarea value={bizAddress} onChange={e => setBizAddress(e.target.value)} rows={2} className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" /></div>
               <div><label className="text-xs font-medium text-muted-foreground mb-1 block">GST Number</label>
                 <input type="text" value={bizGst} onChange={e => setBizGst(e.target.value.toUpperCase())} className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">UPI ID (for QR payments)</label>
+                <input type="text" value={bizUpi} onChange={e => setBizUpi(e.target.value)} placeholder="yourname@okhdfcbank"
+                  className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                <p className="text-[11px] text-muted-foreground mt-1">Customer scans this UPI ID via QR to pay you directly. Example: <code className="px-1 bg-muted rounded">9876543210@paytm</code></p>
+              </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Store Link</label>
                 <input type="text" value={bizSlug} onChange={e => { setBizSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSlugAvailable(null); }}

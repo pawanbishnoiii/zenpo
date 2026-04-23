@@ -318,6 +318,15 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Payments Tab */}
+      {activeTab === 'payments' && <AdminPaymentGateway />}
+
+      {/* Settlements Tab */}
+      {activeTab === 'settlements' && <AdminSettlements />}
+
+      {/* App Releases Tab */}
+      {activeTab === 'releases' && <AdminAppReleases />}
+
       {/* Gallery Tab */}
       {activeTab === 'gallery' && (
         <div className="space-y-4">
