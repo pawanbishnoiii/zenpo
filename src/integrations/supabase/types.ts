@@ -16,42 +16,57 @@ export type Database = {
     Tables: {
       admin_payment_settings: {
         Row: {
+          active_mode: string
           created_at: string
           default_commission_percent: number
           id: string
           is_enabled: boolean
           is_test_mode: boolean
+          live_key_id: string
+          live_key_secret: string
           payout_time_window: string
           razorpay_key_id: string
           razorpay_key_secret: string
           razorpay_webhook_secret: string
           singleton: boolean
+          test_key_id: string
+          test_key_secret: string
           updated_at: string
         }
         Insert: {
+          active_mode?: string
           created_at?: string
           default_commission_percent?: number
           id?: string
           is_enabled?: boolean
           is_test_mode?: boolean
+          live_key_id?: string
+          live_key_secret?: string
           payout_time_window?: string
           razorpay_key_id?: string
           razorpay_key_secret?: string
           razorpay_webhook_secret?: string
           singleton?: boolean
+          test_key_id?: string
+          test_key_secret?: string
           updated_at?: string
         }
         Update: {
+          active_mode?: string
           created_at?: string
           default_commission_percent?: number
           id?: string
           is_enabled?: boolean
           is_test_mode?: boolean
+          live_key_id?: string
+          live_key_secret?: string
           payout_time_window?: string
           razorpay_key_id?: string
           razorpay_key_secret?: string
           razorpay_webhook_secret?: string
           singleton?: boolean
+          test_key_id?: string
+          test_key_secret?: string
           updated_at?: string
         }
         Relationships: []
@@ -206,6 +221,39 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_credit_log: {
+        Row: {
+          amount: number
+          business_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          invoice_id: string | null
+          reason: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          invoice_id?: string | null
+          reason?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          invoice_id?: string | null
+          reason?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           business_id: string
@@ -254,6 +302,45 @@ export type Database = {
           vehicle_number?: string | null
           vehicle_type?: string | null
           visit_count?: number
+        }
+        Relationships: []
+      }
+      email_log: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          invoice_id: string | null
+          provider: string
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          invoice_id?: string | null
+          provider?: string
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          invoice_id?: string | null
+          provider?: string
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
         }
         Relationships: []
       }
@@ -994,6 +1081,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_customer_credit: {
+        Args: {
+          _amount: number
+          _business_id: string
+          _customer_id: string
+          _invoice_id?: string
+          _reason: string
+        }
+        Returns: number
+      }
       aggregate_daily_settlements: {
         Args: { _period_end: string; _period_start: string }
         Returns: number
