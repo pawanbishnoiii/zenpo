@@ -2,7 +2,7 @@
 // Configure URL in Razorpay Dashboard: https://<project>.supabase.co/functions/v1/razorpay-webhook
 // Events to subscribe: payment.captured, payment.failed, payment_link.paid
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { createHmac } from "https://deno.land/std@0.224.0/node/crypto.ts";
+import { createHmac } from "node:crypto";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
