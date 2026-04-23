@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_payment_settings: {
+        Row: {
+          created_at: string
+          default_commission_percent: number
+          id: string
+          is_enabled: boolean
+          is_test_mode: boolean
+          payout_time_window: string
+          razorpay_key_id: string
+          razorpay_key_secret: string
+          razorpay_webhook_secret: string
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_commission_percent?: number
+          id?: string
+          is_enabled?: boolean
+          is_test_mode?: boolean
+          payout_time_window?: string
+          razorpay_key_id?: string
+          razorpay_key_secret?: string
+          razorpay_webhook_secret?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_commission_percent?: number
+          id?: string
+          is_enabled?: boolean
+          is_test_mode?: boolean
+          payout_time_window?: string
+          razorpay_key_id?: string
+          razorpay_key_secret?: string
+          razorpay_webhook_secret?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_offers: {
         Row: {
           business_id: string
@@ -61,6 +103,7 @@ export type Database = {
           address: string | null
           business_name: string
           category: string
+          commission_percent_override: number | null
           created_at: string
           default_tax_percent: number
           gst_enabled: boolean
@@ -77,11 +120,13 @@ export type Database = {
           store_theme: string | null
           theme: string | null
           updated_at: string
+          upi_id: string | null
         }
         Insert: {
           address?: string | null
           business_name: string
           category?: string
+          commission_percent_override?: number | null
           created_at?: string
           default_tax_percent?: number
           gst_enabled?: boolean
@@ -98,11 +143,13 @@ export type Database = {
           store_theme?: string | null
           theme?: string | null
           updated_at?: string
+          upi_id?: string | null
         }
         Update: {
           address?: string | null
           business_name?: string
           category?: string
+          commission_percent_override?: number | null
           created_at?: string
           default_tax_percent?: number
           gst_enabled?: boolean
@@ -119,6 +166,7 @@ export type Database = {
           store_theme?: string | null
           theme?: string | null
           updated_at?: string
+          upi_id?: string | null
         }
         Relationships: []
       }
@@ -413,6 +461,72 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          business_id: string
+          commission_amount: number
+          commission_percent: number
+          created_at: string
+          currency: string
+          flow: string
+          id: string
+          invoice_id: string | null
+          is_test_mode: boolean
+          method: string | null
+          owner_net_amount: number
+          raw_event: Json | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          razorpay_payment_link_id: string | null
+          settlement_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          business_id: string
+          commission_amount?: number
+          commission_percent?: number
+          created_at?: string
+          currency?: string
+          flow?: string
+          id?: string
+          invoice_id?: string | null
+          is_test_mode?: boolean
+          method?: string | null
+          owner_net_amount?: number
+          raw_event?: Json | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_payment_link_id?: string | null
+          settlement_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          commission_amount?: number
+          commission_percent?: number
+          created_at?: string
+          currency?: string
+          flow?: string
+          id?: string
+          invoice_id?: string | null
+          is_test_mode?: boolean
+          method?: string | null
+          owner_net_amount?: number
+          raw_event?: Json | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_payment_link_id?: string | null
+          settlement_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       printer_settings: {
         Row: {
           business_id: string
@@ -629,6 +743,60 @@ export type Database = {
         }
         Relationships: []
       }
+      settlements: {
+        Row: {
+          business_id: string
+          commission_amount: number
+          created_at: string
+          gross_amount: number
+          id: string
+          net_amount: number
+          notes: string | null
+          payout_method: string | null
+          period_end: string
+          period_start: string
+          processed_at: string | null
+          razorpay_payout_id: string | null
+          status: string
+          txn_count: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          commission_amount?: number
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          payout_method?: string | null
+          period_end: string
+          period_start: string
+          processed_at?: string | null
+          razorpay_payout_id?: string | null
+          status?: string
+          txn_count?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          commission_amount?: number
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          payout_method?: string | null
+          period_end?: string
+          period_start?: string
+          processed_at?: string | null
+          razorpay_payout_id?: string | null
+          status?: string
+          txn_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       smtp_settings: {
         Row: {
           created_at: string
@@ -790,6 +958,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      aggregate_daily_settlements: {
+        Args: { _period_end: string; _period_start: string }
+        Returns: number
+      }
       check_slug_available: { Args: { _slug: string }; Returns: boolean }
       get_store_by_slug: { Args: { _slug: string }; Returns: Json }
       has_role: {
