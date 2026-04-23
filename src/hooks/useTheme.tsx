@@ -15,7 +15,8 @@ export const useTheme = () => {
     if (typeof window === 'undefined') return 'light';
     const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
     if (stored === 'light' || stored === 'dark') return stored;
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    // Default: day mode (do NOT auto-follow OS preference)
+    return 'light';
   });
 
   useEffect(() => { apply(mode); localStorage.setItem(STORAGE_KEY, mode); }, [mode]);

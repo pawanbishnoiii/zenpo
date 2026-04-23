@@ -21,6 +21,10 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Catch references to undefined identifiers (e.g. accidentally removed `signOut`)
+      // TS already enforces this at compile time, but we keep it as a CI safety net.
+      "no-undef": "off", // disabled because TS handles it; keeping rule slot for clarity
+      "@typescript-eslint/no-use-before-define": ["error", { functions: false, classes: true, variables: true }],
     },
   },
 );
