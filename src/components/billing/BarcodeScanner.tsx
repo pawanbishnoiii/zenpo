@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, RefreshCcw } from 'lucide-react';
+import { playSound } from '@/lib/sounds';
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -35,7 +36,7 @@ const BarcodeScanner = ({ open, onClose, onScan }: BarcodeScannerProps) => {
       await scannerRef.current.start(
         selectedCameraId,
         { fps: 10, qrbox: { width: 250, height: 150 } },
-        async (decodedText) => { onScan(decodedText); await stopScanner(); onClose(); },
+        async (decodedText) => { playSound('scan'); onScan(decodedText); await stopScanner(); onClose(); },
         () => {}
       );
       startedRef.current = true;
