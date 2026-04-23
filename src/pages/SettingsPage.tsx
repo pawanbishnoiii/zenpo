@@ -271,13 +271,34 @@ const SettingsPage = () => {
       </motion.button>
 
       <Dialog open={!!activePanel} onOpenChange={open => !open && setActivePanel(null)}>
-        <DialogContent className="rounded-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="rounded-2xl max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer & Devices' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Dashboard Theme' : activePanel === 'store_design' ? 'Design Your Store' : activePanel === 'reviews' ? 'Manage Reviews' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : 'Settings'}
+              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer & Devices' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Dashboard Theme' : activePanel === 'store_design' ? 'Design Your Store' : activePanel === 'reviews' ? 'Manage Reviews' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : activePanel === 'gst_accounts' ? 'GST & Accounts' : activePanel === 'gst_invoice' ? 'Invoice & Tax Setup' : activePanel === 'appearance' ? 'Appearance' : 'Settings'}
             </DialogTitle>
             <DialogDescription>Manage your settings</DialogDescription>
           </DialogHeader>
+
+          {activePanel === 'gst_accounts' && <GstAccountsPanel />}
+          {activePanel === 'gst_invoice' && <GstInvoicePanel />}
+          {activePanel === 'appearance' && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                {(['light', 'dark'] as const).map(m => (
+                  <button key={m} onClick={() => mode !== m && toggleTheme()}
+                    className={`p-4 rounded-2xl border-2 transition-all text-left ${mode === m ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {m === 'light' ? <Sun className="w-5 h-5 text-warning" /> : <Moon className="w-5 h-5 text-primary" />}
+                      <p className="text-sm font-bold text-foreground capitalize">{m} Mode</p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{m === 'light' ? 'Bright, high-contrast UI' : 'Easy on the eyes at night'}</p>
+                    {mode === m && <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">ACTIVE</span>}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center">Theme persists across sessions on this device.</p>
+            </div>
+          )}
 
           {activePanel === 'business' && (
             <div className="space-y-3">
