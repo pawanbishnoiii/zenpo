@@ -1,6 +1,6 @@
 // Verifies a Razorpay payment signature (HMAC-SHA256) using ACTIVE mode key.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { createHmac } from "https://deno.land/std@0.224.0/node/crypto.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import { createHmac } from "node:crypto";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
