@@ -1,12 +1,15 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, CreditCard, Wallet, Link2, BookOpen } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, CreditCard, Wallet, Link2, BookOpen, QrCode, Zap, Lock } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import InvoicePreview from './InvoicePreview';
 import { connectPrinter, sendToPrinter, buildReceiptData, PrinterConnection } from '@/lib/ezoPrinter';
+import { openRazorpayCheckout, loadRazorpayScript } from '@/lib/razorpay';
+import { playSound } from '@/lib/sounds';
+import UpiQrDialog from './UpiQrDialog';
 
 const VEHICLE_TYPES = ['Car', 'Bike', 'Scooter', 'Auto', 'SUV', 'Truck', 'Other'];
 
