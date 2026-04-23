@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Building2, CreditCard, Receipt, Printer, Bell, Palette, Users, Database, Crown, ExternalLink, Copy, LogOut } from 'lucide-react';
+import { Building2, CreditCard, Receipt, Printer, Bell, Palette, Users, Database, Crown, ExternalLink, Copy, LogOut, Calculator, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useBusiness } from '@/hooks/useBusiness';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/hooks/useTheme';
 import RazorpayPanel from './RazorpayPanel';
 import GstInvoicePanel from './GstInvoicePanel';
+import GstAccountsPanel from './GstAccountsPanel';
 import PrintSettingsPanel from './PrintSettingsPanel';
 import NotificationsPanel from './NotificationsPanel';
 import StaffPanel from './StaffPanel';
@@ -17,6 +19,7 @@ const SECTIONS = [
     { id: 'business', icon: Building2, label: 'Business Profile' },
     { id: 'razorpay', icon: CreditCard, label: 'Payment Gateway' },
     { id: 'gst', icon: Receipt, label: 'Invoice & GST' },
+    { id: 'accounts', icon: Calculator, label: 'GST & Accounts' },
     { id: 'printer', icon: Printer, label: 'Print Settings' },
   ]},
   { group: 'Preferences', items: [
@@ -39,6 +42,7 @@ const DesktopSettingsLayout = ({ fallbackContent }: Props) => {
   const { business } = useBusiness();
   const { signOut } = useAuth();
   const { toast } = useToast();
+  const { mode, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const storeUrl = business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : '';
@@ -118,10 +122,29 @@ const DesktopSettingsLayout = ({ fallbackContent }: Props) => {
             </div>
             {active === 'razorpay' ? <RazorpayPanel />
               : active === 'gst' ? <GstInvoicePanel />
+              : active === 'accounts' ? <GstAccountsPanel />
               : active === 'printer' ? <PrintSettingsPanel />
               : active === 'notifications' ? <NotificationsPanel />
               : active === 'staff' ? <StaffPanel />
               : active === 'data' ? <DataBackupPanel />
+              : active === 'appearance' ? (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-sm text-muted-foreground">Choose your visual preference. Persists on this device.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(['light', 'dark'] as const).map(m => (
+                      <button key={m} onClick={() => mode !== m && toggleTheme()}
+                        className={`p-4 rounded-2xl border-2 transition-all text-left ${mode === m ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          {m === 'light' ? <Sun className="w-5 h-5 text-warning" /> : <Moon className="w-5 h-5 text-primary" />}
+                          <p className="text-sm font-bold text-foreground capitalize">{m} Mode</p>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{m === 'light' ? 'Bright, high-contrast UI' : 'Easy on the eyes at night'}</p>
+                        {mode === m && <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">ACTIVE</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
               : fallbackContent(active)}
           </motion.div>
         </div>
