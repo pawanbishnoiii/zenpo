@@ -33,6 +33,9 @@ const CartPanel = () => {
   const [printer, setPrinter] = useState<PrinterConnection>({ device: null, characteristic: null, connected: false });
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showUpiQr, setShowUpiQr] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [payingOnline, setPayingOnline] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { business } = useBusiness();
   const { toast } = useToast();
