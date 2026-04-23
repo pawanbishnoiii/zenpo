@@ -1,5 +1,5 @@
 // Creates a Razorpay Payment Link (for SMS/WhatsApp share). Records txn.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,13 +15,16 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: admin } = await supabase.from("admin_payment_settings").select("*").eq("singleton", true).maybeSingle();
-    const keyId = admin?.razorpay_key_id || Deno.env.get("RAZORPAY_KEY_ID") || "";
-    const keySecret = admin?.razorpay_key_secret || Deno.env.get("RAZORPAY_KEY_SECRET") || "";
+    const a: any = admin;
+    const mode = (a?.active_mode as 'test' | 'live') || (a?.is_test_mode ? 'test' : 'live');
+    const keyId = (mode === 'live' ? a?.live_key_id : a?.test_key_id) || a?.razorpay_key_id || Deno.env.get("RAZORPAY_KEY_ID") || "";
+    const keySecret = (mode === 'live' ? a?.live_key_secret : a?.test_key_secret) || a?.razorpay_key_secret || Deno.env.get("RAZORPAY_KEY_SECRET") || "";
     if (!keyId || !keySecret) return json({ ok: false, error: "Razorpay not configured by admin." }, 400);
+    if (a && a.is_enabled === false) return json({ ok: false, error: "Payment gateway is disabled by admin." }, 400);
 
     const { data: biz } = await supabase.from("businesses").select("commission_percent_override, business_name").eq("id", business_id).maybeSingle();
-    const commissionPct = biz?.commission_percent_override != null ? Number(biz.commission_percent_override) : Number(admin?.default_commission_percent ?? 2.0);
-    const testMode = admin?.is_test_mode ?? keyId.startsWith("rzp_test_");
+    const commissionPct = biz?.commission_percent_override != null ? Number(biz.commission_percent_override) : Number(a?.default_commission_percent ?? 2.0);
+    const testMode = mode === 'test';
 
     const auth = btoa(`${keyId}:${keySecret}`);
     const body = {

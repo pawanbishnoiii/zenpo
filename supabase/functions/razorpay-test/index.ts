@@ -1,7 +1,7 @@
 // Razorpay credentials test + payment link creator
 // Uses admin-level RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env (global) by default,
 // falls back to per-business payment_settings row if env not configured.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

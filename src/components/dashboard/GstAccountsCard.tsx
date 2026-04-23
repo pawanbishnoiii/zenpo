@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 interface Stats {
   monthRevenue: number;
   monthTax: number;
-  outstandingUdhar: number;
+  outstandingCredit: number;
   taxableInvoiceCount: number;
   topCustomerName: string | null;
   topCustomerAmount: number;
@@ -19,7 +19,7 @@ const GstAccountsCard = () => {
   const { business } = useBusiness();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
-    monthRevenue: 0, monthTax: 0, outstandingUdhar: 0, taxableInvoiceCount: 0, topCustomerName: null, topCustomerAmount: 0,
+    monthRevenue: 0, monthTax: 0, outstandingCredit: 0, taxableInvoiceCount: 0, topCustomerName: null, topCustomerAmount: 0,
   });
 
   useEffect(() => {
@@ -34,10 +34,10 @@ const GstAccountsCard = () => {
       const monthTax = (invs || []).reduce((s, i) => s + Number(i.tax_total || 0), 0);
       const taxableInvoiceCount = (invs || []).filter(i => Number(i.tax_total || 0) > 0).length;
       const { data: udhar } = await supabase.from('customers').select('credit_balance').eq('business_id', business.id).gt('credit_balance', 0);
-      const outstandingUdhar = (udhar || []).reduce((s, c) => s + Number(c.credit_balance || 0), 0);
+      const outstandingCredit = (udhar || []).reduce((s, c) => s + Number(c.credit_balance || 0), 0);
       const top = cust?.[0];
       setStats({
-        monthRevenue, monthTax, outstandingUdhar, taxableInvoiceCount,
+        monthRevenue, monthTax, outstandingCredit, taxableInvoiceCount,
         topCustomerName: top?.full_name || null, topCustomerAmount: Number(top?.total_spent || 0),
       });
     };
@@ -83,9 +83,9 @@ const GstAccountsCard = () => {
       <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
         <div className="p-3.5 space-y-1">
           <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            <Wallet className="w-3 h-3" /> Outstanding Udhar
+            <Wallet className="w-3 h-3" /> Outstanding Credit
           </div>
-          <p className={`text-xl font-bold font-display ${stats.outstandingUdhar > 0 ? 'text-warning' : 'text-foreground'}`}>₹{stats.outstandingUdhar.toLocaleString('en-IN')}</p>
+          <p className={`text-xl font-bold font-display ${stats.outstandingCredit > 0 ? 'text-warning' : 'text-foreground'}`}>₹{stats.outstandingCredit.toLocaleString('en-IN')}</p>
           <button onClick={() => navigate('/customers')} className="text-[10px] text-primary hover:underline">View customers</button>
         </div>
         <div className="p-3.5 space-y-1">

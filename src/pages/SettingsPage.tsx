@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy, Bluetooth, Wifi, Usb, Paintbrush, Star, MessageSquare } from 'lucide-react';
+import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy, Bluetooth, Wifi, Usb, Paintbrush, Star, MessageSquare, Calculator, Receipt, Sun, Moon } from 'lucide-react';
+import GstAccountsPanel from '@/components/settings/GstAccountsPanel';
+import GstInvoicePanel from '@/components/settings/GstInvoicePanel';
+import { useTheme } from '@/hooks/useTheme';
 import PageHeader from '@/components/layout/PageHeader';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness } from '@/hooks/useBusiness';
@@ -14,7 +17,7 @@ import { getCategoryConfig } from '@/lib/categoryConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
 import DesktopSettingsLayout from '@/components/settings/DesktopSettingsLayout';
 
-type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | 'store_design' | 'reviews' | null;
+type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | 'store_design' | 'reviews' | 'gst_accounts' | 'gst_invoice' | 'appearance' | null;
 
 const STORE_THEME_OPTIONS = [
   { id: 'suspended', label: 'Minimal', desc: 'Clean, modern monochrome', emoji: '⚡' },
@@ -25,6 +28,7 @@ const STORE_THEME_OPTIONS = [
 ];
 
 const SettingsPage = () => {
+  const { mode, toggle: toggleTheme } = useTheme();
   const { signOut, user, isAdmin } = useAuth();
   const { business, refetch } = useBusiness();
   const { toast } = useToast();
@@ -173,6 +177,8 @@ const SettingsPage = () => {
       {
         title: 'Modules',
         items: [
+          { key: 'gst_accounts' as SettingsPanel, icon: Calculator, label: 'GST & Accounts', desc: 'Hisab kitab — sales, GST, credit ledger' },
+          { key: 'gst_invoice' as SettingsPanel, icon: Receipt, label: 'Invoice & Tax Setup', desc: 'GST number, default tax %, prefix, footer' },
           { nav: '/offers', icon: Tag, label: 'Offers & Coupons', desc: 'Discount campaigns' },
           { nav: '/customers', icon: Users, label: categoryConfig?.navLabel.customers || 'Customer Manager', desc: 'CRM and analytics' },
           { nav: '/history', icon: Shield, label: 'Bill History', desc: 'All past invoices' },
@@ -183,6 +189,7 @@ const SettingsPage = () => {
         title: 'Account',
         items: [
           { key: 'profile' as SettingsPanel, icon: User, label: 'Profile', desc: user?.email || 'Name & contact' },
+          { key: 'appearance' as SettingsPanel, icon: mode === 'dark' ? Moon : Sun, label: 'Appearance', desc: `${mode === 'dark' ? 'Dark' : 'Light'} mode` },
           { key: 'notifications' as SettingsPanel, icon: Bell, label: 'Notifications', desc: 'Alerts & updates' },
           { key: 'security' as SettingsPanel, icon: Shield, label: 'Security', desc: 'Sessions & login' },
           { key: 'language' as SettingsPanel, icon: Globe, label: 'Language', desc: 'English' },
@@ -196,7 +203,7 @@ const SettingsPage = () => {
       });
     }
     return groups;
-  }, [user?.email, isAdmin, categoryConfig]);
+  }, [user?.email, isAdmin, categoryConfig, mode]);
 
   // Desktop two-panel layout
   if (!isMobile) {
@@ -264,13 +271,34 @@ const SettingsPage = () => {
       </motion.button>
 
       <Dialog open={!!activePanel} onOpenChange={open => !open && setActivePanel(null)}>
-        <DialogContent className="rounded-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="rounded-2xl max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer & Devices' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Dashboard Theme' : activePanel === 'store_design' ? 'Design Your Store' : activePanel === 'reviews' ? 'Manage Reviews' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : 'Settings'}
+              {activePanel === 'business' ? 'Business Profile' : activePanel === 'printer' ? 'Printer & Devices' : activePanel === 'profile' ? 'Profile' : activePanel === 'theme' ? 'Dashboard Theme' : activePanel === 'store_design' ? 'Design Your Store' : activePanel === 'reviews' ? 'Manage Reviews' : activePanel === 'notifications' ? 'Notifications' : activePanel === 'security' ? 'Security' : activePanel === 'language' ? 'Language' : activePanel === 'gst_accounts' ? 'GST & Accounts' : activePanel === 'gst_invoice' ? 'Invoice & Tax Setup' : activePanel === 'appearance' ? 'Appearance' : 'Settings'}
             </DialogTitle>
             <DialogDescription>Manage your settings</DialogDescription>
           </DialogHeader>
+
+          {activePanel === 'gst_accounts' && <GstAccountsPanel />}
+          {activePanel === 'gst_invoice' && <GstInvoicePanel />}
+          {activePanel === 'appearance' && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                {(['light', 'dark'] as const).map(m => (
+                  <button key={m} onClick={() => mode !== m && toggleTheme()}
+                    className={`p-4 rounded-2xl border-2 transition-all text-left ${mode === m ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {m === 'light' ? <Sun className="w-5 h-5 text-warning" /> : <Moon className="w-5 h-5 text-primary" />}
+                      <p className="text-sm font-bold text-foreground capitalize">{m} Mode</p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{m === 'light' ? 'Bright, high-contrast UI' : 'Easy on the eyes at night'}</p>
+                    {mode === m && <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">ACTIVE</span>}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center">Theme persists across sessions on this device.</p>
+            </div>
+          )}
 
           {activePanel === 'business' && (
             <div className="space-y-3">
