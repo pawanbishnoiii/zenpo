@@ -515,6 +515,18 @@ const CartPanel = () => {
           </div>
         </div>
       )}
+
+      {/* UPI QR Dialog */}
+      <UpiQrDialog
+        open={showUpiQr}
+        onClose={() => setShowUpiQr(false)}
+        onPaid={() => { setShowUpiQr(false); setPaymentVerified(true); }}
+        amount={grandTotal}
+        upiId={(business as any)?.upi_id || ''}
+        payeeName={business?.business_name || 'Merchant'}
+        invoiceNumber={invoiceNumber || `TMP-${Date.now().toString(36).toUpperCase()}`}
+        businessId={business?.id || ''}
+      />
     </div>
   );
 };
