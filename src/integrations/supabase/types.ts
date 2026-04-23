@@ -56,6 +56,42 @@ export type Database = {
         }
         Relationships: []
       }
+      app_releases: {
+        Row: {
+          changelog: string
+          created_at: string
+          download_count: number
+          file_size_bytes: number
+          file_url: string
+          id: string
+          is_latest: boolean
+          uploaded_by: string | null
+          version: string
+        }
+        Insert: {
+          changelog?: string
+          created_at?: string
+          download_count?: number
+          file_size_bytes?: number
+          file_url: string
+          id?: string
+          is_latest?: boolean
+          uploaded_by?: string | null
+          version: string
+        }
+        Update: {
+          changelog?: string
+          created_at?: string
+          download_count?: number
+          file_size_bytes?: number
+          file_url?: string
+          id?: string
+          is_latest?: boolean
+          uploaded_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       business_offers: {
         Row: {
           business_id: string
@@ -979,6 +1015,7 @@ export type Database = {
         Args: { _business_id: string }
         Returns: number
       }
+      set_latest_release: { Args: { _release_id: string }; Returns: undefined }
       upsert_customer_for_invoice: {
         Args: {
           _business_id: string
