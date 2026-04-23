@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, Phone, Mail, Car, Calendar, IndianRupee, Loader2, Pencil, Trash2, Save, MessageSquare, Plus, BarChart3, TrendingUp, UserPlus } from 'lucide-react';
+import { Search, Users, Phone, Mail, Car, Calendar, IndianRupee, Loader2, Pencil, Trash2, Save, MessageSquare, Plus, BarChart3, TrendingUp, UserPlus, Wallet } from 'lucide-react';
 import PageHeader from '@/components/layout/PageHeader';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import dayjs from 'dayjs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { getCategoryConfig } from '@/lib/categoryConfig';
+import CreditAdjustDialog from '@/components/customers/CreditAdjustDialog';
 
 const CustomerManagement = () => {
   const { business } = useBusiness();
@@ -20,6 +21,7 @@ const CustomerManagement = () => {
   const [editForm, setEditForm] = useState({ full_name: '', phone: '', email: '', vehicle_number: '', vehicle_type: '', notes: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [sortBy, setSortBy] = useState<'recent' | 'spent' | 'visits'>('recent');
+  const [creditTarget, setCreditTarget] = useState<any>(null);
 
   const categoryConfig = business ? getCategoryConfig(business.category) : null;
   const showVehicleFields = categoryConfig?.billingFeatures.vehicleType ?? false;
@@ -163,14 +165,21 @@ const CustomerManagement = () => {
                   </div>
                   {c.notes && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><MessageSquare className="w-3 h-3" />{c.notes}</p>}
                 </div>
-                <div className="text-right shrink-0 ml-2">
+                <div className="text-right shrink-0 ml-2 space-y-0.5">
                   <p className="text-sm font-bold text-foreground">₹{Number(c.total_spent || 0).toFixed(0)}</p>
                   <p className="text-[10px] text-muted-foreground">{c.visit_count || 0} visits</p>
+                  {Number(c.credit_balance || 0) > 0 && (
+                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/15 text-warning">Credit ₹{Number(c.credit_balance).toFixed(0)}</span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 {c.last_visit_at && <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> {dayjs(c.last_visit_at).format('DD MMM YYYY')}</p>}
                 <div className="flex items-center gap-1.5">
+                  <button onClick={() => setCreditTarget(c)} title="Adjust Credit (+/-)"
+                    className="px-2 py-1 rounded-lg bg-warning/10 hover:bg-warning/20 text-warning text-[10px] font-bold flex items-center gap-1">
+                    <Wallet className="w-3 h-3" /> Credit ±
+                  </button>
                   <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-muted"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></button>
                   <button onClick={() => handleDelete(c.id)} className="p-1.5 rounded-lg hover:bg-destructive/10"><Trash2 className="w-3.5 h-3.5 text-destructive" /></button>
                 </div>
@@ -227,6 +236,16 @@ const CustomerManagement = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CreditAdjustDialog
+        open={!!creditTarget}
+        onClose={() => setCreditTarget(null)}
+        customer={creditTarget ? { id: creditTarget.id, full_name: creditTarget.full_name || 'Customer', credit_balance: Number(creditTarget.credit_balance || 0) } : null}
+        businessId={business?.id || ''}
+        onChanged={(newBal) => {
+          setCustomers(prev => prev.map(x => x.id === creditTarget?.id ? { ...x, credit_balance: newBal } : x));
+        }}
+      />
     </div>
   );
 };

@@ -107,7 +107,7 @@ const Dashboard = () => {
     { title: "Today's Sales", value: `₹${stats.todaySales.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'success', sub: 'Live' },
     { title: 'Monthly Sales', value: `₹${stats.monthlySales.toLocaleString('en-IN')}`, icon: TrendingUp, color: 'success', sub: dayjs().format('MMMM') },
     { title: 'GST Collected', value: `₹${stats.monthGst.toLocaleString('en-IN')}`, icon: Receipt, color: 'primary', sub: gstEnabled ? 'This month' : 'GST off' },
-    { title: 'Pending Payments', value: `₹${stats.pendingPayments.toLocaleString('en-IN')}`, icon: Wallet, color: stats.pendingPayments > 0 ? 'warning' : 'muted', sub: 'Udhar outstanding' },
+    { title: 'Pending Credit', value: `₹${stats.pendingPayments.toLocaleString('en-IN')}`, icon: Wallet, color: stats.pendingPayments > 0 ? 'warning' : 'muted', sub: 'Customer credit outstanding' },
     { title: 'Total Invoices', value: stats.totalInvoices.toLocaleString('en-IN'), icon: FileText, color: 'primary', sub: 'All-time' },
     { title: 'Net Profit', value: `₹${stats.netProfit.toLocaleString('en-IN')}`, icon: Calculator, color: stats.netProfit >= 0 ? 'success' : 'destructive', sub: 'Revenue − GST' },
   ];
@@ -296,7 +296,7 @@ const Dashboard = () => {
                       <td className="p-3 text-right text-muted-foreground hidden sm:table-cell">₹{Number(inv.tax_total).toFixed(0)}</td>
                       <td className="p-3 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isPaid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                          {isPaid ? 'PAID' : 'UDHAR'}
+                          {isPaid ? 'PAID' : 'CREDIT'}
                         </span>
                       </td>
                       <td className="p-3 text-right text-muted-foreground hidden md:table-cell">{dayjs(inv.created_at).format('D MMM, h:mm A')}</td>
