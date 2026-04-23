@@ -1,16 +1,19 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ReactNode } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 
 interface PageHeaderProps {
   title: string;
   backTo?: string;
   actions?: ReactNode;
+  hideThemeToggle?: boolean;
 }
 
-const PageHeader = ({ title, backTo = '/', actions }: PageHeaderProps) => {
+const PageHeader = ({ title, backTo = '/', actions, hideThemeToggle }: PageHeaderProps) => {
   const navigate = useNavigate();
+  const { isDark, toggle } = useTheme();
 
   return (
     <div className="flex items-center justify-between">
@@ -30,7 +33,16 @@ const PageHeader = ({ title, backTo = '/', actions }: PageHeaderProps) => {
           {title}
         </motion.h1>
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      <div className="flex items-center gap-2">
+        {!hideThemeToggle && (
+          <motion.button whileTap={{ scale: 0.9 }} onClick={toggle}
+            className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+            title={isDark ? 'Switch to Light' : 'Switch to Dark'}>
+            {isDark ? <Sun className="w-4 h-4 text-warning" /> : <Moon className="w-4 h-4 text-foreground" />}
+          </motion.button>
+        )}
+        {actions && <div className="flex items-center gap-2">{actions}</div>}
+      </div>
     </div>
   );
 };

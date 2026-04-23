@@ -8,10 +8,28 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+// Per-tab storage key disables Navigator.locks (which can deadlock in some browsers/sessions),
+// while keeping session persistence in localStorage. Singleton client across the app.
+declare global {
+  // eslint-disable-next-line no-var
+  var __ezo_supabase_client: ReturnType<typeof createClient<Database>> | undefined;
+}
+
+export const supabase =
+  globalThis.__ezo_supabase_client ??
+  createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      storage: localStorage,
+      storageKey: 'sb-tdxopczbezualbcrnanu-auth-token',
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      // Disable Navigator LockManager (it deadlocks in some Lovable preview iframes).
+      lock: async (_name, _acquireTimeout, fn) => fn(),
+    },
+  });
+
+if (typeof window !== 'undefined') {
+  globalThis.__ezo_supabase_client = supabase;
+}
