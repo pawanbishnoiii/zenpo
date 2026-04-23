@@ -414,22 +414,51 @@ const CartPanel = () => {
             })}
           </div>
 
-          {/* Razorpay link generator */}
+          {/* Razorpay Pay Now + Link */}
           <AnimatePresence>
             {paymentMethod === 'razorpay' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                 className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
-                <p className="text-[11px] text-muted-foreground">Payment link will be generated and emailed to customer via Razorpay.</p>
-                {!razorpayLink ? (
-                  <button onClick={handleGenerateRazorpayLink} disabled={generatingLink || grandTotal <= 0}
-                    className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
-                    {generatingLink ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Generate Payment Link
-                  </button>
-                ) : (
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] text-success font-semibold">✓ Link ready</p>
-                    <a href={razorpayLink} target="_blank" rel="noopener" className="text-[11px] text-primary truncate block break-all">{razorpayLink}</a>
+                {paymentVerified ? (
+                  <div className="flex items-center gap-2 text-success text-xs font-bold">
+                    <Lock className="w-3.5 h-3.5" /> Payment verified ✓ — you can print the bill
                   </div>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">Choose: Pay Now (Checkout popup) or generate a payment link.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={handleRazorpayPayNow} disabled={payingOnline || grandTotal <= 0 || !customerName.trim() || !customerPhone.trim()}
+                        className="py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 glow-primary">
+                        {payingOnline ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Pay Now
+                      </button>
+                      <button onClick={handleGenerateRazorpayLink} disabled={generatingLink || grandTotal <= 0}
+                        className="py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                        {generatingLink ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Send Link
+                      </button>
+                    </div>
+                    {razorpayLink && (
+                      <div className="space-y-1 pt-1 border-t border-border">
+                        <p className="text-[11px] text-success font-semibold">✓ Link ready</p>
+                        <a href={razorpayLink} target="_blank" rel="noopener" className="text-[11px] text-primary truncate block break-all">{razorpayLink}</a>
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            )}
+            {paymentMethod === 'upi' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl bg-accent/5 border border-accent/20 p-3 space-y-2">
+                {(business as any)?.upi_id ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">Customer scans your UPI QR to pay directly. No commission.</p>
+                    <button onClick={() => setShowUpiQr(true)} disabled={grandTotal <= 0}
+                      className="w-full py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                      <QrCode className="w-3.5 h-3.5" /> Show UPI QR — ₹{grandTotal.toFixed(0)}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-warning">Add your UPI ID in Settings → Business Profile to enable QR payments.</p>
                 )}
               </motion.div>
             )}
