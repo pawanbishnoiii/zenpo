@@ -121,12 +121,35 @@ const CartPanel = () => {
   const handleRazorpayPayNow = async () => {
     if (!business) return;
     if (grandTotal <= 0) { toast({ title: 'Add items first', variant: 'destructive' }); return; }
+    if (!customerName.trim() || !customerPhone.trim()) {
+      playSound('error');
+      toast({ title: 'Customer required', description: 'Name & phone needed for Razorpay prefill.', variant: 'destructive' });
+      return;
+    }
     setPayingOnline(true);
     try {
       const ok = await loadRazorpayScript();
       if (!ok) throw new Error('Razorpay SDK could not load. Check internet.');
+
+      // Auto-fetch fresh customer profile from DB if available (for prefill + notes)
+      let customerRow: any = selectedCustomer;
+      if (!customerRow && customerPhone) {
+        const { data } = await supabase.from('customers').select('id, full_name, phone, email, vehicle_number')
+          .eq('business_id', business.id).eq('phone', customerPhone.trim()).maybeSingle();
+        if (data) customerRow = data;
+      }
+
       const { data: orderData, error: orderErr } = await supabase.functions.invoke('razorpay-create-order', {
-        body: { business_id: business.id, amount: grandTotal, customer_name: customerName, customer_email: customerEmail, customer_phone: customerPhone },
+        body: {
+          business_id: business.id,
+          amount: grandTotal,
+          customer_id: customerRow?.id || '',
+          customer_name: customerName,
+          customer_email: customerEmail || customerRow?.email || '',
+          customer_phone: customerPhone,
+          customer_gstin: business.gst_number || '',
+          customer_address: business.address || '',
+        },
       });
       if (orderErr) throw orderErr;
       if (!orderData?.ok) throw new Error(orderData?.error || 'Order creation failed');
@@ -134,7 +157,7 @@ const CartPanel = () => {
       await openRazorpayCheckout({
         key: orderData.key_id, amount: orderData.amount, currency: orderData.currency, order_id: orderData.order_id,
         name: business.business_name || 'Ezo POS', description: `Invoice payment`,
-        prefill: { name: customerName, email: customerEmail, contact: customerPhone },
+        prefill: { name: customerName, email: customerEmail || customerRow?.email || '', contact: customerPhone },
         onSuccess: async (resp) => {
           const { data: vd, error: ve } = await supabase.functions.invoke('razorpay-verify-payment', { body: resp });
           if (ve || !vd?.ok) {
@@ -144,7 +167,7 @@ const CartPanel = () => {
           }
           playSound('cash');
           setPaymentVerified(true);
-          toast({ title: 'Payment received ✓', description: `₹${grandTotal.toFixed(0)} verified` });
+          toast({ title: 'Payment received ✓', description: `₹${grandTotal.toFixed(0)} verified — proceed to print` });
         },
         onDismiss: () => { setPayingOnline(false); },
         onFailure: (err) => { playSound('error'); toast({ title: 'Payment failed', description: err?.description || 'Try again', variant: 'destructive' }); },
@@ -327,7 +350,7 @@ const CartPanel = () => {
 
             {/* Customer Section */}
             <div className="space-y-2 pt-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer (Optional)</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer <span className="text-destructive">*</span> (required)</p>
               <div className="relative">
                 <input type="text" placeholder="Search by name or phone..." value={customerPhone || customerName}
                   onChange={e => { const v = e.target.value; if (/^\d/.test(v)) setCustomerPhone(v); else { setCustomerName(v); setCustomerPhone(''); } setSelectedCustomer(null); }}
@@ -414,22 +437,51 @@ const CartPanel = () => {
             })}
           </div>
 
-          {/* Razorpay link generator */}
+          {/* Razorpay Pay Now + Link */}
           <AnimatePresence>
             {paymentMethod === 'razorpay' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                 className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
-                <p className="text-[11px] text-muted-foreground">Payment link will be generated and emailed to customer via Razorpay.</p>
-                {!razorpayLink ? (
-                  <button onClick={handleGenerateRazorpayLink} disabled={generatingLink || grandTotal <= 0}
-                    className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
-                    {generatingLink ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Generate Payment Link
-                  </button>
-                ) : (
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] text-success font-semibold">✓ Link ready</p>
-                    <a href={razorpayLink} target="_blank" rel="noopener" className="text-[11px] text-primary truncate block break-all">{razorpayLink}</a>
+                {paymentVerified ? (
+                  <div className="flex items-center gap-2 text-success text-xs font-bold">
+                    <Lock className="w-3.5 h-3.5" /> Payment verified ✓ — you can print the bill
                   </div>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">Choose: Pay Now (Checkout popup) or generate a payment link.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={handleRazorpayPayNow} disabled={payingOnline || grandTotal <= 0 || !customerName.trim() || !customerPhone.trim()}
+                        className="py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 glow-primary">
+                        {payingOnline ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Pay Now
+                      </button>
+                      <button onClick={handleGenerateRazorpayLink} disabled={generatingLink || grandTotal <= 0}
+                        className="py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                        {generatingLink ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Send Link
+                      </button>
+                    </div>
+                    {razorpayLink && (
+                      <div className="space-y-1 pt-1 border-t border-border">
+                        <p className="text-[11px] text-success font-semibold">✓ Link ready</p>
+                        <a href={razorpayLink} target="_blank" rel="noopener" className="text-[11px] text-primary truncate block break-all">{razorpayLink}</a>
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            )}
+            {paymentMethod === 'upi' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl bg-accent/5 border border-accent/20 p-3 space-y-2">
+                {(business as any)?.upi_id ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">Customer scans your UPI QR to pay directly. No commission.</p>
+                    <button onClick={() => setShowUpiQr(true)} disabled={grandTotal <= 0}
+                      className="w-full py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                      <QrCode className="w-3.5 h-3.5" /> Show UPI QR — ₹{grandTotal.toFixed(0)}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-warning">Add your UPI ID in Settings → Business Profile to enable QR payments.</p>
                 )}
               </motion.div>
             )}
@@ -463,6 +515,18 @@ const CartPanel = () => {
           </div>
         </div>
       )}
+
+      {/* UPI QR Dialog */}
+      <UpiQrDialog
+        open={showUpiQr}
+        onClose={() => setShowUpiQr(false)}
+        onPaid={() => { setShowUpiQr(false); setPaymentVerified(true); }}
+        amount={grandTotal}
+        upiId={(business as any)?.upi_id || ''}
+        payeeName={business?.business_name || 'Merchant'}
+        invoiceNumber={invoiceNumber || `TMP-${Date.now().toString(36).toUpperCase()}`}
+        businessId={business?.id || ''}
+      />
     </div>
   );
 };

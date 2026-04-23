@@ -1,13 +1,16 @@
 import { motion, useInView } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import dashboardDesktop from '@/assets/dashboard-desktop.png';
+import dashboardMobile from '@/assets/dashboard-mobile.jpg';
 import {
   Car, Wrench, Zap, BarChart3, ScanLine, Printer, ChevronRight, Star, Shield,
   ShoppingCart, Pill, Laptop, Shirt, Apple, Coffee, Scissors, BookOpen,
   Hammer, Heart, Search, Users, Receipt, Globe, ArrowRight, Check, Sparkles,
   Store, Phone, Mail, MapPin, MessageSquare, Smartphone, Clock, Lock,
-  Layers, TrendingUp, Eye, Play, ChevronDown, Award, Wifi, Database
+  Layers, TrendingUp, Eye, Play, ChevronDown, Award, Wifi, Database, Download
 } from 'lucide-react';
 
 const storeCategories = [
@@ -79,7 +82,22 @@ const AnimatedSection = ({ children, className = '' }: { children: React.ReactNo
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const [latestRelease, setLatestRelease] = useState<any>(null);
   if (!loading && user) { navigate('/', { replace: true }); }
+
+  useEffect(() => {
+    supabase.from('app_releases').select('*').eq('is_latest', true).maybeSingle()
+      .then(({ data }) => setLatestRelease(data));
+  }, []);
+
+  const handleDownload = async () => {
+    if (!latestRelease?.file_url) return;
+    // Increment download count (best-effort)
+    await supabase.from('app_releases').update({ download_count: (latestRelease.download_count || 0) + 1 }).eq('id', latestRelease.id);
+    window.open(latestRelease.file_url, '_blank');
+  };
+
+  const formatSize = (b: number) => b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024).toFixed(0)} KB`;
 
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">

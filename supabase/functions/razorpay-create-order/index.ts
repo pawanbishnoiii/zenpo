@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { business_id, invoice_id, amount, customer_name, customer_email, customer_phone } = await req.json();
+    const { business_id, invoice_id, amount, customer_name, customer_email, customer_phone, customer_id, customer_gstin, customer_address } = await req.json();
     if (!business_id) return json({ ok: false, error: "business_id required" }, 400);
     if (!amount || Number(amount) <= 0) return json({ ok: false, error: "Invalid amount" }, 400);
 
@@ -59,7 +59,16 @@ Deno.serve(async (req) => {
       amount: Math.round(Number(amount) * 100),
       currency: "INR",
       receipt: `inv_${(invoice_id || "tmp").slice(0, 30)}_${Date.now().toString(36)}`,
-      notes: { business_id, invoice_id: invoice_id || "", customer_name: customer_name || "", customer_phone: customer_phone || "" },
+      notes: {
+        business_id,
+        invoice_id: invoice_id || "",
+        customer_id: customer_id || "",
+        customer_name: customer_name || "",
+        customer_phone: customer_phone || "",
+        customer_email: customer_email || "",
+        gstin: customer_gstin || "",
+        address: customer_address || "",
+      },
     };
     const r = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
