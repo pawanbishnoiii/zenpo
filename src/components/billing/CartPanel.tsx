@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, CreditCard, Wallet, Link2, BookOpen, QrCode, Zap, Lock } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, CreditCard, Wallet, Link2, BookOpen, QrCode, Zap, Lock, Mail } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,8 +49,8 @@ const CartPanel = () => {
   const paymentMethods = [
     { id: 'cash', label: 'Cash', icon: Banknote },
     { id: 'upi', label: 'UPI', icon: Smartphone },
-    { id: 'razorpay', label: 'Razorpay', icon: Link2 },
-    { id: 'credit', label: 'Udhar', icon: BookOpen },
+    { id: 'razorpay', label: 'Online', icon: Link2 },
+    { id: 'credit', label: 'Credit', icon: BookOpen },
     { id: 'cod', label: 'COD', icon: FileText },
   ];
 
@@ -268,8 +268,38 @@ const CartPanel = () => {
   const handleShareWhatsApp = () => {
     const itemsList = cart.map(i => `• ${i.product.name} x${i.quantity} = ₹${(i.product.discountPrice * i.quantity).toFixed(0)}`).join('\n');
     const storeUrl = business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : '';
-    const msg = `*Invoice: ${invoiceNumber}*\n${business?.business_name || 'ZEN POS'}\n\n${itemsList}\n\nSubtotal: ₹${subtotal.toFixed(0)}\nTax: ₹${taxTotal.toFixed(0)}${couponAmount > 0 ? `\nCoupon: -₹${couponAmount.toFixed(0)}` : ''}\n*Total: ₹${grandTotal.toFixed(0)}*\nPayment: ${paymentMethod.toUpperCase()}${storeUrl ? `\n\nVisit: ${storeUrl}` : ''}\n\nThank you!`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    const msg = `*Invoice: ${invoiceNumber}*\n${business?.business_name || 'ZEN POS'}\n\n${itemsList}\n\nSubtotal: ₹${subtotal.toFixed(0)}\nTax: ₹${taxTotal.toFixed(0)}${couponAmount > 0 ? `\nCoupon: -₹${couponAmount.toFixed(0)}` : ''}\n*Total: ₹${grandTotal.toFixed(0)}*\nPayment: ${paymentMethod.toUpperCase()}${storeUrl ? `\n\nVisit: ${storeUrl}` : ''}\n\nThank you!\n\n— Powered by Ezo`;
+    // Send to customer phone if present (E.164 ish — strip non-digits, prepend 91 if 10 digits)
+    let phone = (customerPhone || '').replace(/\D/g, '');
+    if (phone.length === 10) phone = '91' + phone;
+    const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleEmailReceipt = async () => {
+    if (!business || !customerEmail.trim()) {
+      toast({ title: 'Email required', description: 'Customer email needed to send receipt.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
+        body: {
+          business_id: business.id,
+          recipient: customerEmail.trim(),
+          business_name: business.business_name || 'Ezo POS',
+          invoice_number: invoiceNumber,
+          customer_name: customerName,
+          items: cart.map(i => ({ name: i.product.name, qty: i.quantity, price: i.product.discountPrice, total: i.product.discountPrice * i.quantity })),
+          subtotal, tax: taxTotal, discount: couponAmount + manualDiscount, total: grandTotal,
+          payment_method: paymentMethod,
+          store_url: business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : undefined,
+        },
+      });
+      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Email failed');
+      toast({ title: 'Email sent ✓', description: customerEmail });
+    } catch (e: any) {
+      toast({ title: 'Email failed', description: e.message, variant: 'destructive' });
+    }
   };
 
   const handleDone = () => { setShowInvoice(false); setPaymentVerified(false); setCustomerName(''); setCustomerPhone(''); setVehicleNumber(''); setVehicleType(''); setCustomerEmail(''); setCouponCode(''); setCouponDiscount(0); clearCart(); };
@@ -300,6 +330,10 @@ const CartPanel = () => {
             <motion.button whileTap={{ scale: 0.95 }} onClick={handleShareWhatsApp}
               className="flex-1 py-3 rounded-xl bg-success/10 text-success text-sm font-semibold flex items-center justify-center gap-2">
               <Share2 className="w-4 h-4" /> WhatsApp
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={handleEmailReceipt} disabled={!customerEmail.trim()}
+              className="flex-1 py-3 rounded-xl bg-primary/10 text-primary text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40">
+              <Mail className="w-4 h-4" /> Email
             </motion.button>
           </div>
           <motion.button whileTap={{ scale: 0.95 }} onClick={handleDone} className="w-full py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary">
@@ -365,7 +399,7 @@ const CartPanel = () => {
                           <p className="text-xs text-muted-foreground truncate">{s.phone} {s.vehicle_number ? `• ${s.vehicle_number}` : ''} • {Number(s.visit_count || 0)} visits</p>
                         </div>
                         {Number(s.credit_balance || 0) > 0 && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/15 text-warning">Udhar ₹{Number(s.credit_balance).toFixed(0)}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/15 text-warning">Credit ₹{Number(s.credit_balance).toFixed(0)}</span>
                         )}
                       </button>
                     ))}
@@ -380,7 +414,7 @@ const CartPanel = () => {
                   <span className="font-semibold text-foreground">{selectedCustomer.full_name}</span>
                   <span className="text-muted-foreground">• {Number(selectedCustomer.visit_count || 0) + 1}{['st','nd','rd'][((Number(selectedCustomer.visit_count || 0)+1)-1)%10] || 'th'} visit</span>
                   {Number(selectedCustomer.credit_balance || 0) > 0 && (
-                    <span className="ml-auto px-2 py-0.5 rounded-full bg-warning/15 text-warning font-bold">Udhar ₹{Number(selectedCustomer.credit_balance).toFixed(0)}</span>
+                    <span className="ml-auto px-2 py-0.5 rounded-full bg-warning/15 text-warning font-bold">Credit ₹{Number(selectedCustomer.credit_balance).toFixed(0)}</span>
                   )}
                 </motion.div>
               )}
@@ -488,7 +522,7 @@ const CartPanel = () => {
             {paymentMethod === 'credit' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                 className="rounded-xl bg-warning/10 border border-warning/30 p-2.5 text-xs text-foreground">
-                <span className="font-semibold">Udhar / Credit:</span> ₹{grandTotal.toFixed(0)} will be added to customer's outstanding balance.
+                <span className="font-semibold">Credit (Khaata):</span> ₹{grandTotal.toFixed(0)} will be added to customer's outstanding balance. Adjust later from Customers page.
                 {selectedCustomer && (
                   <span className="block text-warning font-bold mt-1">New balance: ₹{(Number(selectedCustomer.credit_balance || 0) + grandTotal).toFixed(0)}</span>
                 )}
