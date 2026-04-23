@@ -25,6 +25,7 @@ const Onboarding = () => {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [gst, setGst] = useState('');
+  const [upiId, setUpiId] = useState('');
   const [printerType, setPrinterType] = useState('58mm');
   const [saving, setSaving] = useState(false);
 
@@ -83,9 +84,9 @@ const Onboarding = () => {
       const { data, error } = await supabase.from('businesses').insert({
         owner_id: user.id, business_name: name.trim(), category,
         theme: category, phone: phone.trim() || null, address: address.trim() || null,
-        gst_number: gst.trim() || null, printer_type: printerType,
+        gst_number: gst.trim() || null, upi_id: upiId.trim() || null, printer_type: printerType,
         store_slug: slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, ''),
-      }).select().single();
+      } as any).select().single();
       if (error) throw error;
       if (data) await supabase.rpc('seed_business_starter_catalog', { _business_id: data.id });
       toast({ title: 'Business Created!', description: 'Your workspace is ready.' });
@@ -189,6 +190,12 @@ const Onboarding = () => {
                 <input type="text" placeholder="GST / Tax Number (optional)" value={gst} onChange={e => setGst(e.target.value.toUpperCase())}
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input type="text" placeholder="UPI ID (e.g. yourname@oksbi) — for QR payments" value={upiId} onChange={e => setUpiId(e.target.value.trim())}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <p className="text-[11px] text-muted-foreground">Add UPI ID to accept zero-commission QR payments at billing. Skip and add later in Settings.</p>
             </div>
           )}
 
