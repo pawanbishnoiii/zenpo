@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy, Bluetooth, Wifi, Usb, Paintbrush, Star, MessageSquare } from 'lucide-react';
+import { Store, Printer, Palette, User, ChevronRight, Bell, Shield, Globe, LogOut, Tag, Users, Loader2, Link2, Save, ExternalLink, Check, X, Share2, Copy, Bluetooth, Wifi, Usb, Paintbrush, Star, MessageSquare, Calculator, Receipt, Sun, Moon } from 'lucide-react';
+import GstAccountsPanel from '@/components/settings/GstAccountsPanel';
+import GstInvoicePanel from '@/components/settings/GstInvoicePanel';
+import { useTheme } from '@/hooks/useTheme';
 import PageHeader from '@/components/layout/PageHeader';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness } from '@/hooks/useBusiness';
@@ -14,7 +17,7 @@ import { getCategoryConfig } from '@/lib/categoryConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
 import DesktopSettingsLayout from '@/components/settings/DesktopSettingsLayout';
 
-type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | 'store_design' | 'reviews' | null;
+type SettingsPanel = 'business' | 'printer' | 'theme' | 'profile' | 'notifications' | 'security' | 'language' | 'store_design' | 'reviews' | 'gst_accounts' | 'gst_invoice' | 'appearance' | null;
 
 const STORE_THEME_OPTIONS = [
   { id: 'suspended', label: 'Minimal', desc: 'Clean, modern monochrome', emoji: '⚡' },
@@ -25,6 +28,7 @@ const STORE_THEME_OPTIONS = [
 ];
 
 const SettingsPage = () => {
+  const { mode, toggle: toggleTheme } = useTheme();
   const { signOut, user, isAdmin } = useAuth();
   const { business, refetch } = useBusiness();
   const { toast } = useToast();
@@ -173,6 +177,8 @@ const SettingsPage = () => {
       {
         title: 'Modules',
         items: [
+          { key: 'gst_accounts' as SettingsPanel, icon: Calculator, label: 'GST & Accounts', desc: 'Hisab kitab — sales, GST, credit ledger' },
+          { key: 'gst_invoice' as SettingsPanel, icon: Receipt, label: 'Invoice & Tax Setup', desc: 'GST number, default tax %, prefix, footer' },
           { nav: '/offers', icon: Tag, label: 'Offers & Coupons', desc: 'Discount campaigns' },
           { nav: '/customers', icon: Users, label: categoryConfig?.navLabel.customers || 'Customer Manager', desc: 'CRM and analytics' },
           { nav: '/history', icon: Shield, label: 'Bill History', desc: 'All past invoices' },
@@ -183,6 +189,7 @@ const SettingsPage = () => {
         title: 'Account',
         items: [
           { key: 'profile' as SettingsPanel, icon: User, label: 'Profile', desc: user?.email || 'Name & contact' },
+          { key: 'appearance' as SettingsPanel, icon: mode === 'dark' ? Moon : Sun, label: 'Appearance', desc: `${mode === 'dark' ? 'Dark' : 'Light'} mode` },
           { key: 'notifications' as SettingsPanel, icon: Bell, label: 'Notifications', desc: 'Alerts & updates' },
           { key: 'security' as SettingsPanel, icon: Shield, label: 'Security', desc: 'Sessions & login' },
           { key: 'language' as SettingsPanel, icon: Globe, label: 'Language', desc: 'English' },
@@ -196,7 +203,7 @@ const SettingsPage = () => {
       });
     }
     return groups;
-  }, [user?.email, isAdmin, categoryConfig]);
+  }, [user?.email, isAdmin, categoryConfig, mode]);
 
   // Desktop two-panel layout
   if (!isMobile) {
