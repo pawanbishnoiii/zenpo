@@ -118,21 +118,66 @@ const CartPanel = () => {
     } finally { setGeneratingLink(false); }
   };
 
+  const handleRazorpayPayNow = async () => {
+    if (!business) return;
+    if (grandTotal <= 0) { toast({ title: 'Add items first', variant: 'destructive' }); return; }
+    setPayingOnline(true);
+    try {
+      const ok = await loadRazorpayScript();
+      if (!ok) throw new Error('Razorpay SDK could not load. Check internet.');
+      const { data: orderData, error: orderErr } = await supabase.functions.invoke('razorpay-create-order', {
+        body: { business_id: business.id, amount: grandTotal, customer_name: customerName, customer_email: customerEmail, customer_phone: customerPhone },
+      });
+      if (orderErr) throw orderErr;
+      if (!orderData?.ok) throw new Error(orderData?.error || 'Order creation failed');
+
+      await openRazorpayCheckout({
+        key: orderData.key_id, amount: orderData.amount, currency: orderData.currency, order_id: orderData.order_id,
+        name: business.business_name || 'Ezo POS', description: `Invoice payment`,
+        prefill: { name: customerName, email: customerEmail, contact: customerPhone },
+        onSuccess: async (resp) => {
+          const { data: vd, error: ve } = await supabase.functions.invoke('razorpay-verify-payment', { body: resp });
+          if (ve || !vd?.ok) {
+            playSound('error');
+            toast({ title: 'Verification failed', description: vd?.error || ve?.message || 'Try again', variant: 'destructive' });
+            return;
+          }
+          playSound('cash');
+          setPaymentVerified(true);
+          toast({ title: 'Payment received ✓', description: `₹${grandTotal.toFixed(0)} verified` });
+        },
+        onDismiss: () => { setPayingOnline(false); },
+        onFailure: (err) => { playSound('error'); toast({ title: 'Payment failed', description: err?.description || 'Try again', variant: 'destructive' }); },
+      });
+    } catch (e: any) {
+      playSound('error');
+      toast({ title: 'Razorpay error', description: e.message || 'Configure Razorpay in Admin', variant: 'destructive' });
+    } finally { setPayingOnline(false); }
+  };
+
   const handleCharge = async () => {
     if (!business) { toast({ title: 'Error', description: 'Set up business first', variant: 'destructive' }); return; }
+    // Customer compulsory now
+    if (!customerName.trim() || !customerPhone.trim()) {
+      playSound('error');
+      toast({ title: 'Customer required', description: 'Enter customer name and phone to charge.', variant: 'destructive' });
+      return;
+    }
+    // Online methods must be verified before printing
+    if (paymentMethod === 'razorpay' && !paymentVerified) {
+      toast({ title: 'Pay Now first', description: 'Complete Razorpay payment before printing.', variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     const invNum = generateInvoiceNumber();
     setInvoiceNumber(invNum);
     try {
       let customerId: string | null = null;
-      const hasDetails = [customerName, customerPhone, customerEmail, vehicleNumber].some(v => v.trim().length > 0);
-      if (hasDetails) {
-        const { data: uid, error: ce } = await supabase.rpc('upsert_customer_for_invoice', {
-          _business_id: business.id, _full_name: customerName, _phone: customerPhone, _email: customerEmail, _vehicle_number: vehicleNumber,
-        });
-        if (ce) throw ce;
-        customerId = uid as string;
-      }
+      const { data: uid, error: ce } = await supabase.rpc('upsert_customer_for_invoice', {
+        _business_id: business.id, _full_name: customerName, _phone: customerPhone, _email: customerEmail, _vehicle_number: vehicleNumber,
+      });
+      if (ce) throw ce;
+      customerId = uid as string;
       const discountTotal = cart.reduce((s, i) => s + (i.product.price - i.product.discountPrice) * i.quantity, 0) + couponAmount;
       const { data: invoice, error: invError } = await supabase.from('invoices').insert({
         business_id: business.id, invoice_number: invNum, customer_id: customerId,
@@ -166,15 +211,13 @@ const CartPanel = () => {
             vehicle_type: vehicleType || undefined,
           }).eq('id', customerId);
         }
-      } else if (paymentMethod === 'credit') {
-        toast({ title: 'Customer required for Udhar', description: 'Add customer details for credit billing.', variant: 'destructive' });
-        setSaving(false);
-        return;
       }
 
+      playSound('cash');
       setShowInvoice(true);
       toast({ title: 'Invoice Created!', description: `${invNum} saved.` });
     } catch (err: any) {
+      playSound('error');
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally { setSaving(false); }
   };
@@ -206,7 +249,7 @@ const CartPanel = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const handleDone = () => { setShowInvoice(false); setCustomerName(''); setCustomerPhone(''); setVehicleNumber(''); setVehicleType(''); setCustomerEmail(''); setCouponCode(''); setCouponDiscount(0); clearCart(); };
+  const handleDone = () => { setShowInvoice(false); setPaymentVerified(false); setCustomerName(''); setCustomerPhone(''); setVehicleNumber(''); setVehicleType(''); setCustomerEmail(''); setCouponCode(''); setCouponDiscount(0); clearCart(); };
 
   if (showInvoice) {
     return (
