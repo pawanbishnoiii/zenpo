@@ -1,5 +1,5 @@
 // Creates a Razorpay order for the Checkout popup flow.
-// Uses admin global keys (admin_payment_settings or env), records a transaction row.
+// Picks active_mode keys (test XOR live) from admin_payment_settings.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -10,31 +10,24 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-interface AdminSettings {
-  razorpay_key_id: string;
-  razorpay_key_secret: string;
-  is_test_mode: boolean;
-  is_enabled: boolean;
-  default_commission_percent: number;
-}
-
-async function loadKeys(supabase: any): Promise<{ keyId: string; keySecret: string; testMode: boolean; commission: number; source: string } | null> {
-  // 1. Env first
-  const envId = Deno.env.get("RAZORPAY_KEY_ID") || "";
-  const envSecret = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
-  // 2. Admin row
+async function loadActiveKeys(supabase: any): Promise<{ keyId: string; keySecret: string; mode: 'test' | 'live'; commission: number; enabled: boolean } | null> {
   const { data } = await supabase.from("admin_payment_settings").select("*").eq("singleton", true).maybeSingle();
-  const admin = data as AdminSettings | null;
-
-  const keyId = admin?.razorpay_key_id || envId;
-  const keySecret = admin?.razorpay_key_secret || envSecret;
+  const d: any = data;
+  if (!d) {
+    // env fallback
+    const envId = Deno.env.get("RAZORPAY_KEY_ID") || "";
+    const envSecret = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
+    if (!envId || !envSecret) return null;
+    return { keyId: envId, keySecret: envSecret, mode: envId.startsWith('rzp_test_') ? 'test' : 'live', commission: 2.0, enabled: true };
+  }
+  const mode = (d.active_mode as 'test' | 'live') || (d.is_test_mode ? 'test' : 'live');
+  const keyId = mode === 'live' ? (d.live_key_id || d.razorpay_key_id || '') : (d.test_key_id || d.razorpay_key_id || '');
+  const keySecret = mode === 'live' ? (d.live_key_secret || d.razorpay_key_secret || '') : (d.test_key_secret || d.razorpay_key_secret || '');
   if (!keyId || !keySecret) return null;
   return {
-    keyId,
-    keySecret,
-    testMode: admin?.is_test_mode ?? keyId.startsWith("rzp_test_"),
-    commission: Number(admin?.default_commission_percent ?? 2.0),
-    source: admin?.razorpay_key_id ? "admin_db" : "env",
+    keyId, keySecret, mode,
+    commission: Number(d.default_commission_percent ?? 2.0),
+    enabled: !!d.is_enabled,
   };
 }
 
@@ -47,8 +40,9 @@ Deno.serve(async (req) => {
     if (!amount || Number(amount) <= 0) return json({ ok: false, error: "Invalid amount" }, 400);
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const keys = await loadKeys(supabase);
+    const keys = await loadActiveKeys(supabase);
     if (!keys) return json({ ok: false, error: "Razorpay not configured by admin." }, 400);
+    if (!keys.enabled) return json({ ok: false, error: "Payment gateway is disabled by admin." }, 400);
 
     // Per-business commission override
     const { data: biz } = await supabase.from("businesses").select("commission_percent_override, business_name").eq("id", business_id).maybeSingle();
@@ -76,7 +70,10 @@ Deno.serve(async (req) => {
       body: JSON.stringify(orderBody),
     });
     const order = await r.json();
-    if (!r.ok) return json({ ok: false, error: order?.error?.description || "Razorpay order creation failed" }, 400);
+    if (!r.ok) {
+      console.error('[razorpay-create-order] Razorpay error:', order);
+      return json({ ok: false, error: order?.error?.description || "Razorpay order creation failed" }, 400);
+    }
 
     const commissionAmount = (Number(amount) * commissionPct) / 100;
     const ownerNet = Number(amount) - commissionAmount;
@@ -92,7 +89,7 @@ Deno.serve(async (req) => {
       commission_percent: commissionPct,
       commission_amount: commissionAmount,
       owner_net_amount: ownerNet,
-      is_test_mode: keys.testMode,
+      is_test_mode: keys.mode === 'test',
     });
 
     return json({
@@ -101,11 +98,12 @@ Deno.serve(async (req) => {
       amount: order.amount,
       currency: order.currency,
       key_id: keys.keyId,
-      mode: keys.testMode ? "test" : "live",
+      mode: keys.mode,
       business_name: biz?.business_name || "",
       customer: { name: customer_name || "", email: customer_email || "", contact: customer_phone || "" },
     });
   } catch (e: any) {
+    console.error('[razorpay-create-order] Server error:', e);
     return json({ ok: false, error: e.message || "Server error" }, 500);
   }
 });
