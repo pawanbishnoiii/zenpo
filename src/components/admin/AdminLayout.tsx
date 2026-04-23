@@ -1,11 +1,14 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BarChart3, Package, Store, Users, Mail, Bell, Settings, Activity, Shield, ChevronLeft, ChevronRight, CreditCard, Menu, X, LogOut } from 'lucide-react';
+import { BarChart3, Package, Store, Users, Mail, Bell, Settings, Activity, Shield, ChevronLeft, ChevronRight, CreditCard, Menu, X, LogOut, Wallet, Smartphone, Cloud } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const NAV_ITEMS = [
   { path: '/admin', icon: BarChart3, label: 'Overview' },
+  { path: '/admin/payments', icon: CreditCard, label: 'Payment Gateway' },
+  { path: '/admin/settlements', icon: Wallet, label: 'Settlements' },
+  { path: '/admin/releases', icon: Cloud, label: 'App Releases' },
   { path: '/admin/gallery', icon: Package, label: 'Gallery' },
   { path: '/admin/stores', icon: Store, label: 'Stores' },
   { path: '/admin/users', icon: Users, label: 'Users' },
@@ -13,7 +16,6 @@ const NAV_ITEMS = [
   { path: '/admin/alerts', icon: Bell, label: 'Alerts' },
   { path: '/admin/features', icon: Settings, label: 'Features' },
   { path: '/admin/analytics', icon: Activity, label: 'Analytics' },
-  { path: '/admin/subscriptions', icon: CreditCard, label: 'Plans' },
 ];
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {

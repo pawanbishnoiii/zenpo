@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, ArrowLeft, Globe, Database, ToggleLeft, ToggleRight, Eye, Search, Mail, Bell, Server, Send, Activity, AlertTriangle, CheckCircle, XCircle, Save, Clock } from 'lucide-react';
+import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, ArrowLeft, Globe, Database, ToggleLeft, ToggleRight, Eye, Search, Mail, Bell, Server, Send, Activity, AlertTriangle, CheckCircle, XCircle, Save, Clock, CreditCard, Wallet, Cloud } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -7,10 +7,13 @@ import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { BUSINESS_CATEGORIES } from '@/lib/categories';
 import { CATEGORY_CONFIGS, getCategoryConfig } from '@/lib/categoryConfig';
+import AdminPaymentGateway from '@/components/admin/AdminPaymentGateway';
+import AdminSettlements from '@/components/admin/AdminSettlements';
+import AdminAppReleases from '@/components/admin/AdminAppReleases';
 
 const generateSKU = () => `GAL-${Date.now().toString(36).toUpperCase()}`;
 
-type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics';
+type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics' | 'payments' | 'settlements' | 'releases';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -199,6 +202,9 @@ const AdminDashboard = () => {
 
   const tabs: { id: AdminTab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'settlements', label: 'Settlements', icon: Wallet },
+    { id: 'releases', label: 'App Releases', icon: Cloud },
     { id: 'gallery', label: 'Gallery', icon: Package },
     { id: 'businesses', label: 'Stores', icon: Store },
     { id: 'users', label: 'Users', icon: Users },
@@ -211,21 +217,24 @@ const AdminDashboard = () => {
   // Derive active tab from URL path for admin sub-routes
   useEffect(() => {
     const path = window.location.pathname;
-    if (path.includes('/admin/gallery')) setActiveTab('gallery');
+    if (path.includes('/admin/payments')) setActiveTab('payments');
+    else if (path.includes('/admin/settlements')) setActiveTab('settlements');
+    else if (path.includes('/admin/releases')) setActiveTab('releases');
+    else if (path.includes('/admin/gallery')) setActiveTab('gallery');
     else if (path.includes('/admin/stores') || path.includes('/admin/businesses')) setActiveTab('businesses');
     else if (path.includes('/admin/users')) setActiveTab('users');
     else if (path.includes('/admin/smtp')) setActiveTab('smtp');
     else if (path.includes('/admin/alerts')) setActiveTab('notifications');
     else if (path.includes('/admin/features')) setActiveTab('features');
     else if (path.includes('/admin/analytics')) setActiveTab('analytics');
-    else if (path.includes('/admin/subscriptions')) setActiveTab('overview');
     else setActiveTab('overview');
   }, []);
 
   const handleTabClick = (tabId: AdminTab) => {
     setActiveTab(tabId);
     const pathMap: Record<AdminTab, string> = {
-      overview: '/admin', gallery: '/admin/gallery', businesses: '/admin/stores',
+      overview: '/admin', payments: '/admin/payments', settlements: '/admin/settlements',
+      releases: '/admin/releases', gallery: '/admin/gallery', businesses: '/admin/stores',
       users: '/admin/users', smtp: '/admin/smtp', notifications: '/admin/alerts',
       features: '/admin/features', analytics: '/admin/analytics',
     };
