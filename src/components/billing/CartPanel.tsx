@@ -121,12 +121,35 @@ const CartPanel = () => {
   const handleRazorpayPayNow = async () => {
     if (!business) return;
     if (grandTotal <= 0) { toast({ title: 'Add items first', variant: 'destructive' }); return; }
+    if (!customerName.trim() || !customerPhone.trim()) {
+      playSound('error');
+      toast({ title: 'Customer required', description: 'Name & phone needed for Razorpay prefill.', variant: 'destructive' });
+      return;
+    }
     setPayingOnline(true);
     try {
       const ok = await loadRazorpayScript();
       if (!ok) throw new Error('Razorpay SDK could not load. Check internet.');
+
+      // Auto-fetch fresh customer profile from DB if available (for prefill + notes)
+      let customerRow: any = selectedCustomer;
+      if (!customerRow && customerPhone) {
+        const { data } = await supabase.from('customers').select('id, full_name, phone, email, vehicle_number')
+          .eq('business_id', business.id).eq('phone', customerPhone.trim()).maybeSingle();
+        if (data) customerRow = data;
+      }
+
       const { data: orderData, error: orderErr } = await supabase.functions.invoke('razorpay-create-order', {
-        body: { business_id: business.id, amount: grandTotal, customer_name: customerName, customer_email: customerEmail, customer_phone: customerPhone },
+        body: {
+          business_id: business.id,
+          amount: grandTotal,
+          customer_id: customerRow?.id || '',
+          customer_name: customerName,
+          customer_email: customerEmail || customerRow?.email || '',
+          customer_phone: customerPhone,
+          customer_gstin: business.gst_number || '',
+          customer_address: business.address || '',
+        },
       });
       if (orderErr) throw orderErr;
       if (!orderData?.ok) throw new Error(orderData?.error || 'Order creation failed');
@@ -134,7 +157,7 @@ const CartPanel = () => {
       await openRazorpayCheckout({
         key: orderData.key_id, amount: orderData.amount, currency: orderData.currency, order_id: orderData.order_id,
         name: business.business_name || 'Ezo POS', description: `Invoice payment`,
-        prefill: { name: customerName, email: customerEmail, contact: customerPhone },
+        prefill: { name: customerName, email: customerEmail || customerRow?.email || '', contact: customerPhone },
         onSuccess: async (resp) => {
           const { data: vd, error: ve } = await supabase.functions.invoke('razorpay-verify-payment', { body: resp });
           if (ve || !vd?.ok) {
@@ -144,7 +167,7 @@ const CartPanel = () => {
           }
           playSound('cash');
           setPaymentVerified(true);
-          toast({ title: 'Payment received ✓', description: `₹${grandTotal.toFixed(0)} verified` });
+          toast({ title: 'Payment received ✓', description: `₹${grandTotal.toFixed(0)} verified — proceed to print` });
         },
         onDismiss: () => { setPayingOnline(false); },
         onFailure: (err) => { playSound('error'); toast({ title: 'Payment failed', description: err?.description || 'Try again', variant: 'destructive' }); },
@@ -327,7 +350,7 @@ const CartPanel = () => {
 
             {/* Customer Section */}
             <div className="space-y-2 pt-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer (Optional)</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer <span className="text-destructive">*</span> (required)</p>
               <div className="relative">
                 <input type="text" placeholder="Search by name or phone..." value={customerPhone || customerName}
                   onChange={e => { const v = e.target.value; if (/^\d/.test(v)) setCustomerPhone(v); else { setCustomerName(v); setCustomerPhone(''); } setSelectedCustomer(null); }}
