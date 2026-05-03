@@ -23,6 +23,7 @@ import CustomerManagement from "@/pages/CustomerManagement";
 import OffersPage from "@/pages/OffersPage";
 import StorePage from "@/pages/StorePage";
 import StoreManager from "@/pages/StoreManager";
+import AppDownloads from "@/pages/AppDownloads";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<HomeRouter />} />
               <Route path="/landing" element={<Index />} />
+              <Route path="/app" element={<AppDownloads />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/store/:slug" element={<StorePage />} />
               <Route path="/onboarding" element={<ProtectedRoute><AppLayout><Onboarding /></AppLayout></ProtectedRoute>} />

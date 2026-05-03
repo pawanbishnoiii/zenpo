@@ -10,10 +10,13 @@ import { CATEGORY_CONFIGS, getCategoryConfig } from '@/lib/categoryConfig';
 import AdminPaymentGateway from '@/components/admin/AdminPaymentGateway';
 import AdminSettlements from '@/components/admin/AdminSettlements';
 import AdminAppReleases from '@/components/admin/AdminAppReleases';
+import AdminPlans from '@/components/admin/AdminPlans';
+import AdminBackup from '@/components/admin/AdminBackup';
+import AdminPaymentTest from '@/components/admin/AdminPaymentTest';
 
 const generateSKU = () => `GAL-${Date.now().toString(36).toUpperCase()}`;
 
-type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics' | 'payments' | 'settlements' | 'releases';
+type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics' | 'payments' | 'settlements' | 'releases' | 'plans' | 'backup' | 'paytest';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -202,7 +205,9 @@ const AdminDashboard = () => {
 
   const tabs: { id: AdminTab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'plans', label: 'Plans', icon: Tag },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'paytest', label: 'Payment Test', icon: Activity },
     { id: 'settlements', label: 'Settlements', icon: Wallet },
     { id: 'releases', label: 'App Releases', icon: Cloud },
     { id: 'gallery', label: 'Gallery', icon: Package },
@@ -210,6 +215,7 @@ const AdminDashboard = () => {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'smtp', label: 'SMTP', icon: Mail },
     { id: 'notifications', label: 'Alerts', icon: Bell },
+    { id: 'backup', label: 'Backup', icon: Database },
     { id: 'features', label: 'Features', icon: Settings },
     { id: 'analytics', label: 'Analytics', icon: Activity },
   ];
@@ -218,6 +224,9 @@ const AdminDashboard = () => {
   useEffect(() => {
     const path = window.location.pathname;
     if (path.includes('/admin/payments')) setActiveTab('payments');
+    else if (path.includes('/admin/plans')) setActiveTab('plans');
+    else if (path.includes('/admin/paytest')) setActiveTab('paytest');
+    else if (path.includes('/admin/backup')) setActiveTab('backup');
     else if (path.includes('/admin/settlements')) setActiveTab('settlements');
     else if (path.includes('/admin/releases')) setActiveTab('releases');
     else if (path.includes('/admin/gallery')) setActiveTab('gallery');
@@ -237,6 +246,7 @@ const AdminDashboard = () => {
       releases: '/admin/releases', gallery: '/admin/gallery', businesses: '/admin/stores',
       users: '/admin/users', smtp: '/admin/smtp', notifications: '/admin/alerts',
       features: '/admin/features', analytics: '/admin/analytics',
+      plans: '/admin/plans', backup: '/admin/backup', paytest: '/admin/paytest',
     };
     navigate(pathMap[tabId] || '/admin');
   };
@@ -326,6 +336,15 @@ const AdminDashboard = () => {
 
       {/* App Releases Tab */}
       {activeTab === 'releases' && <AdminAppReleases />}
+
+      {/* Plans Tab */}
+      {activeTab === 'plans' && <AdminPlans />}
+
+      {/* Backup Tab */}
+      {activeTab === 'backup' && <AdminBackup />}
+
+      {/* Payment Test Tab */}
+      {activeTab === 'paytest' && <AdminPaymentTest />}
 
       {/* Gallery Tab */}
       {activeTab === 'gallery' && (
