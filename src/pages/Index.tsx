@@ -1,509 +1,501 @@
-import { motion, useInView } from 'framer-motion';
+import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, Suspense, lazy } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import dashboardDesktop from '@/assets/dashboard-desktop.png';
-import dashboardMobile from '@/assets/dashboard-mobile.jpg';
 import {
-  Car, Wrench, Zap, BarChart3, ScanLine, Printer, ChevronRight, Star, Shield,
-  ShoppingCart, Pill, Laptop, Shirt, Apple, Coffee, Scissors, BookOpen,
-  Hammer, Heart, Search, Users, Receipt, Globe, ArrowRight, Check, Sparkles,
-  Store, Phone, Mail, MapPin, MessageSquare, Smartphone, Clock, Lock,
-  Layers, TrendingUp, Eye, Play, ChevronDown, Award, Wifi, Database, Download
+  Sparkles, ArrowRight, Star, Check, ScanLine, Boxes, BarChart3, Building2,
+  Users, Bell, Download, Apple, PlayCircle, Menu, X, Zap, Shield, Globe, Smartphone,
 } from 'lucide-react';
 
-const storeCategories = [
-  { icon: Car, name: 'Car Wash', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  { icon: Wrench, name: 'Auto Parts', color: 'text-orange-500', bg: 'bg-orange-500/10' },
-  { icon: ShoppingCart, name: 'Grocery', color: 'text-green-500', bg: 'bg-green-500/10' },
-  { icon: Pill, name: 'Medical', color: 'text-red-500', bg: 'bg-red-500/10' },
-  { icon: Laptop, name: 'Electronics', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-  { icon: Shirt, name: 'Fashion', color: 'text-pink-500', bg: 'bg-pink-500/10' },
-  { icon: Apple, name: 'Fruits & Veg', color: 'text-lime-500', bg: 'bg-lime-500/10' },
-  { icon: Coffee, name: 'Café', color: 'text-amber-600', bg: 'bg-amber-600/10' },
-  { icon: Scissors, name: 'Salon', color: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10' },
-  { icon: Hammer, name: 'Hardware', color: 'text-slate-500', bg: 'bg-slate-500/10' },
-  { icon: BookOpen, name: 'Stationery', color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-  { icon: Heart, name: 'Pet Store', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-];
+// ─────────── Theme tokens (local) ───────────
+const VIOLET = '#8B5CF6';
+const CYAN = '#06B6D4';
+const EMERALD = '#10B981';
 
-const features = [
-  { icon: ScanLine, title: 'Barcode Scanner', desc: 'Scan product barcodes with camera to instantly add items to billing or inventory' },
-  { icon: Printer, title: 'Multi-Printer Support', desc: 'Connect Epson, Canon, HP, SUNMI, Samsung and more printers for instant receipt printing' },
-  { icon: BarChart3, title: 'Smart Reports', desc: 'Revenue analytics, daily/weekly/monthly trends, and inventory insights' },
-  { icon: Shield, title: 'Cloud Secured', desc: 'All your business data is encrypted and backed up in the cloud automatically' },
-  { icon: Users, title: 'Customer CRM', desc: 'Auto-save customer profiles, track visits, spending history and vehicle info' },
-  { icon: Globe, title: 'Online Store', desc: 'Get a unique public store link with 5 beautiful themes to share your catalog' },
-  { icon: Smartphone, title: 'Mobile Optimized', desc: 'Use billing, workspace and dashboard on phone with touch-optimized interface' },
-  { icon: MessageSquare, title: 'WhatsApp Sharing', desc: 'Share bills, store links and receipts directly via WhatsApp' },
-  { icon: Lock, title: 'Admin Controls', desc: 'Central admin dashboard to manage all businesses, users and platform features' },
-];
+// ─────────── Three.js scene (lazy) ───────────
+const HeroScene = lazy(() => import('@/components/landing/HeroScene'));
 
-const testimonials = [
-  { name: 'Rajesh Kumar', biz: 'AutoSpa Car Wash', text: 'ZEN POS completely transformed our billing. Barcode scanning and thermal printing saves us 30 minutes daily!', avatar: '🚗' },
-  { name: 'Priya Sharma', biz: 'Krishna Grocery', text: 'Managing 500+ products was a nightmare. Now I scan, bill, and track everything from my phone.', avatar: '🛒' },
-  { name: 'Ahmed Khan', biz: 'TechZone Electronics', text: 'The customer management feature helps me remember every customer. My repeat business is up 40%!', avatar: '💻' },
-  { name: 'Dr. Meena', biz: 'LifeCare Pharmacy', text: 'Expiry tracking and batch management has been a game changer for our pharmacy. No more expired stock losses.', avatar: '💊' },
-  { name: 'Sunita Devi', biz: 'Style Studio Salon', text: 'Appointment booking and service tracking makes managing my salon so much easier. Clients love the online store!', avatar: '✂️' },
-  { name: 'Ravi Patel', biz: 'Fresh Farm Veggies', text: 'Weight-based billing is perfect for my vegetable shop. Daily price updates are so simple now.', avatar: '🥬' },
-];
+// ─────────── Helpers ───────────
+const SectionWrap: React.FC<{ children: React.ReactNode; id?: string; className?: string }> = ({ children, id, className = '' }) => (
+  <section id={id} className={`relative w-full ${className}`}>{children}</section>
+);
 
-const pricingFeatures = [
-  'Unlimited Products & Services', 'Barcode Scanner & Multi-Printer Support', 'Customer Management & CRM',
-  'Online Store with 5 Themes', 'Revenue Reports & Analytics', 'WhatsApp Bill Sharing',
-  'Multi-Category Dashboard', 'Cloud Backup & Security', 'Email Notifications', 'SMTP Integration',
-];
+const FloatingOrbs = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <motion.div className="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full blur-3xl opacity-30"
+      style={{ background: `radial-gradient(circle, ${VIOLET}, transparent 70%)` }}
+      animate={{ x: [0, 60, 0], y: [0, 40, 0] }} transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }} />
+    <motion.div className="absolute -bottom-40 -right-40 w-[520px] h-[520px] rounded-full blur-3xl opacity-25"
+      style={{ background: `radial-gradient(circle, ${CYAN}, transparent 70%)` }}
+      animate={{ x: [0, -50, 0], y: [0, -30, 0] }} transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }} />
+    <motion.div className="absolute top-1/2 left-1/3 w-[380px] h-[380px] rounded-full blur-3xl opacity-20"
+      style={{ background: `radial-gradient(circle, ${EMERALD}, transparent 70%)` }}
+      animate={{ x: [0, 40, 0], y: [0, -50, 0] }} transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }} />
+  </div>
+);
 
-const howItWorks = [
-  { step: '01', title: 'Sign Up Free', desc: 'Create your account with email. No credit card needed.', icon: Users },
-  { step: '02', title: 'Choose Category', desc: 'Select your business type from 12+ categories for a customized experience.', icon: Layers },
-  { step: '03', title: 'Add Products', desc: 'Pick from pre-built gallery or add manually. Scan barcodes to add instantly.', icon: ScanLine },
-  { step: '04', title: 'Start Billing', desc: 'Create invoices, print receipts, share on WhatsApp. All from your phone.', icon: Receipt },
-];
+const Grain = () => (
+  <svg className="fixed inset-0 w-full h-full pointer-events-none opacity-[0.06] mix-blend-overlay z-50" aria-hidden>
+    <filter id="zen-noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" stitchTiles="stitch" /></filter>
+    <rect width="100%" height="100%" filter="url(#zen-noise)" />
+  </svg>
+);
 
-const platformStats = [
-  { val: '12+', label: 'Business Types', icon: Store },
-  { val: '60+', label: 'Pre-built Products', icon: Database },
-  { val: '9+', label: 'Printer Brands', icon: Printer },
-  { val: '5', label: 'Store Themes', icon: Eye },
-];
-
-const AnimatedSection = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
+// ─────────── Custom cursor ───────────
+const CustomCursor = () => {
+  const [pos, setPos] = useState({ x: -100, y: -100 });
+  useEffect(() => {
+    const handler = (e: MouseEvent) => setPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener('mousemove', handler);
+    return () => window.removeEventListener('mousemove', handler);
+  }, []);
   return (
-    <motion.div ref={ref} initial={{ opacity: 0, y: 40 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, ease: 'easeOut' }} className={className}>
-      {children}
-    </motion.div>
+    <motion.div
+      className="fixed top-0 left-0 w-6 h-6 rounded-full pointer-events-none z-[100] hidden md:block mix-blend-screen"
+      animate={{ x: pos.x - 12, y: pos.y - 12 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 20, mass: 0.4 }}
+      style={{ background: `radial-gradient(circle, ${VIOLET}, transparent 70%)`, boxShadow: `0 0 30px ${VIOLET}` }} />
   );
 };
 
-const Index = () => {
-  const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const [latestRelease, setLatestRelease] = useState<any>(null);
-  if (!loading && user) { navigate('/', { replace: true }); }
-
+// ─────────── Navbar ───────────
+const Navbar = ({ navigate }: { navigate: (p: string) => void }) => {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
-    supabase.from('app_releases').select('*').eq('is_latest', true).maybeSingle()
-      .then(({ data }) => setLatestRelease(data));
+    const onScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  const handleDownload = async () => {
-    if (!latestRelease?.file_url) return;
-    // Increment download count (best-effort)
-    await supabase.from('app_releases').update({ download_count: (latestRelease.download_count || 0) + 1 }).eq('id', latestRelease.id);
-    window.open(latestRelease.file_url, '_blank');
-  };
-
-  const formatSize = (b: number) => b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024).toFixed(0)} KB`;
-
+  const links = [
+    { label: 'Home', href: '#hero' }, { label: 'Features', href: '#features' },
+    { label: 'Pricing', href: '#pricing' }, { label: 'App', href: '/app', route: true }, { label: 'Contact', href: '#footer' },
+  ];
   return (
-    <div className="min-h-screen bg-background overflow-hidden relative">
-      {/* Animated Grid Background */}
-      <div className="pointer-events-none fixed inset-0 opacity-15" style={{
-        backgroundImage: 'linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px)',
-        backgroundSize: '40px 40px', maskImage: 'radial-gradient(circle at center, black 20%, transparent 75%)',
-      }} />
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-96" style={{ background: 'linear-gradient(180deg, hsl(var(--primary) / 0.12), transparent)' }} />
-      
-      {/* Floating orbs */}
-      <motion.div animate={{ y: [0, -20, 0], x: [0, 10, 0] }} transition={{ duration: 8, repeat: Infinity }} className="pointer-events-none fixed top-32 left-[10%] w-64 h-64 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, hsl(var(--primary)), transparent)' }} />
-      <motion.div animate={{ y: [0, 20, 0], x: [0, -15, 0] }} transition={{ duration: 10, repeat: Infinity }} className="pointer-events-none fixed top-64 right-[15%] w-48 h-48 rounded-full opacity-8" style={{ background: 'radial-gradient(circle, hsl(var(--accent)), transparent)' }} />
-
-      {/* Sticky Navbar */}
-      <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/50">
-        <div className="flex items-center justify-between px-4 md:px-8 py-3 max-w-6xl mx-auto">
-          <div className="flex items-center gap-2">
-            <motion.div whileHover={{ rotate: 15 }} className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary-foreground" />
-            </motion.div>
-            <span className="text-lg font-bold font-display text-foreground">ZEN <span className="gradient-primary-text">POS</span></span>
+    <>
+      <motion.nav initial={{ y: -100 }} animate={{ y: 0 }}
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? 'bg-black/60 backdrop-blur-2xl border-b border-white/5' : 'bg-transparent'}`}>
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+          <button onClick={() => navigate('/')} className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}>
+              <Zap className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-white font-bold text-lg tracking-tight">Zenpoo</span>
+          </button>
+          <div className="hidden md:flex items-center gap-8">
+            {links.map(l => (
+              <button key={l.label} onClick={() => l.route ? navigate(l.href) : document.querySelector(l.href)?.scrollIntoView({ behavior: 'smooth' })}
+                className="relative text-sm text-slate-300 hover:text-white transition-colors group">
+                {l.label}
+                <span className="absolute -bottom-1 left-1/2 w-0 h-px bg-violet-400 group-hover:w-full group-hover:left-0 transition-all duration-300" />
+              </button>
+            ))}
           </div>
-          <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#categories" className="hover:text-foreground transition-colors">Categories</a>
-            <a href="#how-it-works" className="hover:text-foreground transition-colors">How it Works</a>
-            <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/auth')} className="px-4 py-2 rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors">Login</button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-              className="px-5 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary">
-              Get Started
-            </motion.button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/app')}
+              className="hidden sm:flex relative items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 backdrop-blur-xl text-white text-sm font-semibold hover:bg-white/10 group">
+              <Download className="w-4 h-4" /> Download
+            </button>
+            <button className="md:hidden text-white" onClick={() => setOpen(!open)}>
+              {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
-      </nav>
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-8">
-        {/* Hero Section - Enhanced */}
-        <section className="pt-16 pb-20 md:pt-24 md:pb-32 text-center space-y-8">
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <motion.span initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6 border border-primary/20">
-              <Sparkles className="w-3.5 h-3.5" /> Free for All Businesses — No Credit Card
-            </motion.span>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-display text-foreground leading-tight">
-              The Smartest <span className="gradient-primary-text">POS System</span> <br className="hidden md:block" />
-              for Every Indian Business
-            </h1>
-            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto mt-5 leading-relaxed">
-              Billing, inventory, customer management, online store, email alerts and analytics — all in one beautiful app.
-              Built for car washes, grocery, medical, electronics, fashion, cafés, salons and 6+ more categories.
-            </p>
+      </motion.nav>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-30 bg-black/95 backdrop-blur-2xl md:hidden flex flex-col items-center justify-center gap-8">
+            {links.map((l, i) => (
+              <motion.button key={l.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+                onClick={() => { setOpen(false); l.route ? navigate(l.href) : document.querySelector(l.href)?.scrollIntoView({ behavior: 'smooth' }); }}
+                className="text-3xl font-bold text-white">{l.label}</motion.button>
+            ))}
           </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl gradient-primary text-primary-foreground font-bold text-sm glow-primary flex items-center justify-center gap-2 shadow-xl">
-              Start Free Now <ChevronRight className="w-4 h-4" />
-            </motion.button>
-            {latestRelease?.file_url ? (
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} onClick={handleDownload}
-                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-foreground text-background font-bold text-sm flex items-center justify-center gap-2 shadow-xl">
-                <Download className="w-4 h-4" /> Download App <span className="text-xs font-normal opacity-70">v{latestRelease.version} • {formatSize(latestRelease.file_size_bytes || 0)}</span>
-              </motion.button>
-            ) : (
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-secondary text-secondary-foreground font-semibold text-sm flex items-center justify-center gap-2">
-                <Play className="w-4 h-4" /> Explore Features
-              </motion.button>
-            )}
+// ─────────── Section 2: Hero ───────────
+const Hero = ({ navigate }: { navigate: (p: string) => void }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.3]);
+  const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+  const blur = useTransform(scrollYProgress, [0, 1], [0, 8]);
+
+  return (
+    <SectionWrap id="hero" className="min-h-screen pt-24 pb-12 overflow-hidden">
+      <div ref={ref} className="relative max-w-7xl mx-auto px-4 lg:px-8 grid lg:grid-cols-2 gap-12 items-center min-h-[80vh]">
+        <FloatingOrbs />
+        <motion.div style={{ opacity }} className="relative z-10 space-y-6">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl text-xs font-medium text-white">
+            <Sparkles className="w-3 h-3" style={{ color: VIOLET }} />
+            <span>Now Available on Android & iOS</span>
           </motion.div>
-
-          {/* Platform Stats */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-            className="flex items-center justify-center gap-6 md:gap-10 pt-8">
-            {platformStats.map((s, i) => {
-              const Icon = s.icon;
-              return (
-                <motion.div key={s.label} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 + i * 0.1 }}
-                  className="text-center">
-                  <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <p className="text-2xl md:text-3xl font-bold font-display gradient-primary-text">{s.val}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
-                </motion.div>
-              );
-            })}
+          <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.05]" style={{ fontFamily: 'Cal Sans, Inter, sans-serif' }}>
+            {'The Future of POS is Here'.split(' ').map((w, i) => (
+              <motion.span key={i} initial={{ opacity: 0, y: 60, filter: 'blur(20px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ delay: i * 0.08, duration: 0.7, ease: 'easeOut' }}
+                className="inline-block mr-3">
+                {i === 3 ? <span style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN},${EMERALD})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{w}</span> : w}
+              </motion.span>
+            ))}
+          </h1>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+            className="text-lg text-slate-400 max-w-xl leading-relaxed">
+            Zenpoo is a modern POS, billing, inventory & business management app — built for shops, salons, cafés and service businesses. One app. Every workflow.
+          </motion.p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
+            className="flex flex-wrap gap-3">
+            <button onClick={() => navigate('/app')}
+              className="group relative px-6 py-3 rounded-xl text-white font-semibold text-sm flex items-center gap-2 overflow-hidden"
+              style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})`, boxShadow: `0 10px 40px -10px ${VIOLET}` }}>
+              <PlayCircle className="w-4 h-4" /> Download for Android
+            </button>
+            <button onClick={() => navigate('/app')}
+              className="px-6 py-3 rounded-xl border border-white/15 bg-white/5 backdrop-blur-xl text-white font-semibold text-sm flex items-center gap-2 hover:bg-white/10">
+              <Apple className="w-4 h-4" /> Download for iOS
+            </button>
           </motion.div>
-
-          {/* Scroll indicator */}
-          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.5, repeat: Infinity }} className="pt-4">
-            <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground/50" />
-          </motion.div>
-        </section>
-
-        {/* Store Categories */}
-        <AnimatedSection>
-          <section id="categories" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">12+ Categories</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Works for Every Store</h2>
-              <p className="text-sm text-muted-foreground max-w-lg mx-auto">No matter what you sell — products or services — ZEN POS adapts to your business type with custom dashboards and workflows</p>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {storeCategories.map((cat, i) => {
-                const Icon = cat.icon;
-                return (
-                  <motion.div key={cat.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    transition={{ delay: i * 0.04 }} whileHover={{ scale: 1.05, y: -5 }}
-                    className="rounded-2xl glass-card shadow-soft p-4 text-center space-y-2 hover:shadow-elevated transition-all cursor-pointer group"
-                    onClick={() => navigate('/auth')}>
-                    <motion.div whileHover={{ rotate: 10 }} className={`w-12 h-12 mx-auto rounded-xl ${cat.bg} flex items-center justify-center`}>
-                      <Icon className={`w-6 h-6 ${cat.color}`} />
-                    </motion.div>
-                    <p className="text-xs font-semibold text-foreground">{cat.name}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-            <p className="text-center text-xs text-muted-foreground">+ Custom Business type for any category not listed</p>
-          </section>
-        </AnimatedSection>
-
-        {/* Features - 3x3 Grid */}
-        <AnimatedSection>
-          <section id="features" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Powerful Tools</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Everything You Need</h2>
-              <p className="text-sm text-muted-foreground max-w-lg mx-auto">From barcode scanning to SMTP email alerts, every feature is built to save you time and grow your business</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {features.map((f, i) => {
-                const Icon = f.icon;
-                return (
-                  <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    transition={{ delay: i * 0.05 }} whileHover={{ y: -4 }}
-                    className="rounded-2xl glass-card shadow-soft p-5 space-y-3 hover:shadow-elevated transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground">{f.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* How it Works */}
-        <AnimatedSection>
-          <section id="how-it-works" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Simple Setup</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Get Started in 3 Minutes</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {howItWorks.map((s, i) => {
-                const Icon = s.icon;
-                return (
-                  <motion.div key={s.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }} className="rounded-2xl glass-card shadow-soft p-6 space-y-3 text-center relative overflow-hidden">
-                    <div className="absolute -top-4 -right-4 text-8xl font-bold font-display text-primary/5">{s.step}</div>
-                    <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-                      <Icon className="w-7 h-7 text-primary" />
-                    </div>
-                    <span className="text-xl font-bold font-display gradient-primary-text">{s.step}</span>
-                    <h3 className="text-sm font-bold text-foreground">{s.title}</h3>
-                    <p className="text-xs text-muted-foreground">{s.desc}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Dashboard Preview Mockup */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20">
-            <div className="rounded-3xl overflow-hidden border border-border/50 shadow-elevated bg-card">
-              <div className="h-8 bg-secondary flex items-center gap-1.5 px-4">
-                <div className="w-3 h-3 rounded-full bg-destructive/50" /><div className="w-3 h-3 rounded-full bg-warning/50" /><div className="w-3 h-3 rounded-full bg-success/50" />
-                <span className="ml-4 text-[10px] text-muted-foreground font-medium">zenpos.app/dashboard</span>
-              </div>
-              <div className="p-6 md:p-8 space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Today Sales', value: '₹12,450', color: 'gradient-primary text-primary-foreground' },
-                    { label: 'Monthly Revenue', value: '₹3.2L', color: 'bg-success/10 text-success' },
-                    { label: 'Products', value: '284', color: 'bg-primary/10 text-primary' },
-                    { label: 'Customers', value: '1,247', color: 'bg-accent/10 text-accent' },
-                  ].map(s => (
-                    <div key={s.label} className={`rounded-xl p-4 ${s.color.includes('gradient') ? s.color : ''}`}>
-                      <div className={`${s.color.includes('gradient') ? '' : s.color} rounded-xl ${s.color.includes('gradient') ? '' : 'p-4'}`}>
-                        <p className={`text-xs ${s.color.includes('gradient') ? 'text-primary-foreground/70' : 'opacity-70'}`}>{s.label}</p>
-                        <p className={`text-xl font-bold font-display ${s.color.includes('gradient') ? '' : ''}`}>{s.value}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="h-32 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 flex items-center justify-center">
-                  <TrendingUp className="w-8 h-8 text-primary/20" />
-                </div>
-              </div>
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Testimonials */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Happy Owners</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Loved by Business Owners</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {testimonials.map((t, i) => (
-                <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                  transition={{ delay: i * 0.08 }} whileHover={{ y: -3 }}
-                  className="rounded-2xl glass-card shadow-soft p-5 space-y-3 hover:shadow-elevated transition-all">
-                  <div className="flex gap-1">{[...Array(5)].map((_, j) => <Star key={j} className="w-3.5 h-3.5 text-warning fill-warning" />)}</div>
-                  <p className="text-sm text-foreground italic leading-relaxed">"{t.text}"</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{t.avatar}</span>
-                    <div><p className="text-xs font-bold text-foreground">{t.name}</p><p className="text-[10px] text-muted-foreground">{t.biz}</p></div>
-                  </div>
-                </motion.div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
+            className="flex items-center gap-3 pt-3">
+            <div className="flex -space-x-2">
+              {['🚗', '🛒', '💊', '☕', '✂️'].map((e, i) => (
+                <div key={i} className="w-8 h-8 rounded-full border-2 border-black flex items-center justify-center text-sm"
+                  style={{ background: `linear-gradient(135deg, hsl(${i * 60} 70% 40%), hsl(${i * 60 + 30} 70% 30%))` }}>{e}</div>
               ))}
             </div>
-          </section>
-        </AnimatedSection>
+            <div className="text-xs text-slate-400">
+              <div className="flex gap-0.5 text-yellow-400">{Array(5).fill(0).map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}</div>
+              <div>Trusted by 10,000+ businesses</div>
+            </div>
+          </motion.div>
+        </motion.div>
 
-        {/* Pricing */}
-        <AnimatedSection>
-          <section id="pricing" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Simple Pricing</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Free Forever</h2>
-              <p className="text-sm text-muted-foreground">No hidden charges. No premium plans. Everything included.</p>
-            </div>
-            <div className="max-w-md mx-auto">
-              <motion.div whileHover={{ y: -4 }}
-                className="rounded-3xl glass-card shadow-elevated p-8 space-y-5 border-2 border-primary/20 relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-1 gradient-primary" />
-                <div className="text-center space-y-1">
-                  <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold mb-2">
-                    <Award className="w-3 h-3" /> Best Value
-                  </div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-primary">Free Plan</p>
-                  <p className="text-5xl font-bold font-display text-foreground">₹0<span className="text-base font-normal text-muted-foreground">/month</span></p>
-                </div>
-                <div className="space-y-2.5">
-                  {pricingFeatures.map(f => (
-                    <div key={f} className="flex items-center gap-2.5">
-                      <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center shrink-0"><Check className="w-3 h-3 text-success" /></div>
-                      <span className="text-sm text-foreground">{f}</span>
-                    </div>
-                  ))}
-                </div>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-                  className="w-full py-3.5 rounded-xl gradient-primary text-primary-foreground font-bold text-sm glow-primary">
-                  Get Started Free
-                </motion.button>
-              </motion.div>
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Find Store */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20 space-y-6">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Discover</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Find a Store</h2>
-              <p className="text-sm text-muted-foreground">Search for businesses using ZEN POS</p>
-            </div>
-            <div className="max-w-md mx-auto">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input type="text" placeholder="Enter store name or slug..."
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-soft"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const val = (e.target as HTMLInputElement).value.trim();
-                      if (val) navigate(`/store/${val}`);
-                    }
-                  }} />
-              </div>
-              <p className="text-xs text-muted-foreground text-center mt-2">Try entering a store slug like "autospa" or "krishna-grocery"</p>
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* FAQ */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">FAQ</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Frequently Asked Questions</h2>
-            </div>
-            <div className="max-w-2xl mx-auto space-y-3">
-              {[
-                { q: 'Is ZEN POS really free?', a: 'Yes! ZEN POS is completely free with no hidden charges. All features including barcode scanning, multi-printer support, online store and analytics are included.' },
-                { q: 'Can I use it on my phone?', a: 'Absolutely! ZEN POS is built mobile-first. The billing, workspace and dashboard are all optimized for phone and tablet use.' },
-                { q: 'Which printers are supported?', a: 'We support Epson, Canon, HP, Samsung, SUNMI, Star Micronics, Citizen and generic thermal printers via Bluetooth, USB and WiFi.' },
-                { q: 'Can I have an online store page?', a: 'Yes! Every business gets a unique public store URL with 5 beautiful themes. Customers can view products and leave reviews.' },
-                { q: 'Is my data secure?', a: 'All data is encrypted and stored in the cloud with automatic backups. Row-level security ensures only you can access your business data.' },
-              ].map((faq, i) => (
-                <motion.div key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
-                  className="rounded-2xl glass-card shadow-soft p-5 space-y-2">
-                  <h3 className="text-sm font-bold text-foreground">{faq.q}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{faq.a}</p>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Contact */}
-        <AnimatedSection>
-          <section id="contact" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Get in Touch</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Contact Us</h2>
-              <p className="text-sm text-muted-foreground">Have questions? We're here to help.</p>
-            </div>
-            <div className="max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { icon: Phone, label: 'Call Us', value: '+91 98765 43210' },
-                { icon: Mail, label: 'Email', value: 'hello@zenpos.in' },
-                { icon: MapPin, label: 'Location', value: 'India' },
-              ].map(c => {
-                const Icon = c.icon;
-                return (
-                  <motion.div key={c.label} whileHover={{ y: -3 }} className="rounded-2xl glass-card shadow-soft p-5 text-center space-y-2">
-                    <div className="w-12 h-12 mx-auto rounded-xl bg-primary/10 flex items-center justify-center"><Icon className="w-5 h-5 text-primary" /></div>
-                    <p className="text-xs font-bold text-foreground">{c.label}</p>
-                    <p className="text-xs text-muted-foreground">{c.value}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* CTA Banner */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20">
-            <motion.div whileHover={{ scale: 1.01 }}
-              className="rounded-3xl gradient-primary p-8 md:p-14 text-center space-y-5 glow-primary relative overflow-hidden">
-              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-              <div className="relative">
-                <h2 className="text-3xl md:text-4xl font-bold font-display text-primary-foreground">Ready to Simplify Your Business?</h2>
-                <p className="text-primary-foreground/80 text-sm max-w-md mx-auto mt-3">Join thousands of business owners who use ZEN POS to save time, increase revenue, and delight customers.</p>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-                  className="mt-6 px-10 py-4 rounded-2xl bg-primary-foreground text-primary font-bold text-sm shadow-xl">
-                  Start Free Today — No Credit Card
-                </motion.button>
-              </div>
-            </motion.div>
-          </section>
-        </AnimatedSection>
-
-        {/* Footer */}
-        <footer className="py-10 border-t border-border">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center"><Zap className="w-4 h-4 text-primary-foreground" /></div>
-                <span className="text-sm font-bold font-display text-foreground">ZEN POS</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">The smartest POS system for every Indian business. Free forever.</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">Product</p>
-              <div className="space-y-1.5">{['Features', 'Categories', 'Pricing', 'Online Store'].map(l => <a key={l} href={`#${l.toLowerCase().replace(' ', '-')}`} className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{l}</a>)}</div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">Support</p>
-              <div className="space-y-1.5">{['Contact Us', 'FAQ', 'Help Center', 'Privacy Policy'].map(l => <a key={l} href="#contact" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{l}</a>)}</div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">Connect</p>
-              <div className="space-y-1.5">
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Phone className="w-3 h-3" /> +91 98765 43210</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> hello@zenpos.in</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Made in India 🇮🇳</p>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">© 2026 ZEN POS. All rights reserved.</p>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>Terms</span><span>Privacy</span><span>Cookies</span>
-            </div>
-          </div>
-        </footer>
+        <motion.div style={{ scale, filter: blur as any }} className="relative h-[420px] lg:h-[560px]">
+          <Suspense fallback={<div className="w-full h-full rounded-3xl bg-gradient-to-br from-violet-900/20 to-cyan-900/20 animate-pulse" />}>
+            <HeroScene />
+          </Suspense>
+        </motion.div>
       </div>
+    </SectionWrap>
+  );
+};
+
+// ─────────── Section 3: Features (horizontal on desktop, stacked mobile) ───────────
+const FEATURES = [
+  { icon: ScanLine, title: 'Smart POS', desc: 'Lightning fast billing with barcode scan, GST, discounts & coupons.', color: VIOLET },
+  { icon: Boxes, title: 'Real-time Inventory', desc: 'Track stock, low-stock alerts, multi-image catalogue.', color: CYAN },
+  { icon: BarChart3, title: 'Deep Analytics', desc: 'Revenue, profit, GST collected — daily / weekly / monthly.', color: EMERALD },
+  { icon: Building2, title: 'Multi-Branch', desc: 'Manage many stores from one admin dashboard.', color: VIOLET },
+  { icon: Users, title: 'Team & Roles', desc: 'Add staff, assign roles, track activity.', color: CYAN },
+  { icon: Bell, title: 'Smart Notifications', desc: 'WhatsApp & SMTP receipts to every customer.', color: EMERALD },
+];
+
+const Features = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <SectionWrap id="features" className="py-24 lg:py-32">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+        <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="text-4xl md:text-6xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Cal Sans, Inter, sans-serif' }}>
+          Everything You <span style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Need</span>
+        </motion.h2>
+        <p className="text-slate-400 text-center mb-16 text-lg">Built for ambitious operators. Loved by daily users.</p>
+
+        <div ref={ref} className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {FEATURES.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <motion.div key={f.title} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.6 }}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                className="group relative rounded-3xl p-6 bg-white/[0.03] border border-white/10 backdrop-blur-xl overflow-hidden hover:border-white/20 transition-colors">
+                <div className="absolute -inset-1 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl"
+                  style={{ background: `radial-gradient(circle at 50% 0%, ${f.color}40, transparent 60%)` }} />
+                <div className="relative z-10">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+                    style={{ background: `linear-gradient(135deg, ${f.color}30, ${f.color}10)`, border: `1px solid ${f.color}40` }}>
+                    <Icon className="w-6 h-6" style={{ color: f.color }} />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">{f.title}</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </SectionWrap>
+  );
+};
+
+// ─────────── Section 4: Showcase ───────────
+const Showcase = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const yLeft = useTransform(scrollYProgress, [0, 1], [80, -80]);
+  const yRight = useTransform(scrollYProgress, [0, 1], [-80, 80]);
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.7, 1, 0.9]);
+  return (
+    <SectionWrap className="py-24 lg:py-32 overflow-hidden">
+      <div ref={ref} className="relative max-w-7xl mx-auto px-4 lg:px-8 text-center">
+        <h2 className="text-4xl md:text-6xl font-bold text-white mb-4" style={{ fontFamily: 'Cal Sans, Inter, sans-serif' }}>
+          See It In <span style={{ background: `linear-gradient(135deg,${VIOLET},${EMERALD})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Action</span>
+        </h2>
+        <p className="text-slate-400 mb-16">Polished workflows for billing, inventory and analytics.</p>
+
+        <div className="relative h-[520px] flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-[480px] h-[480px] rounded-full blur-3xl opacity-40"
+              style={{ background: `radial-gradient(circle, ${VIOLET}, ${CYAN}, transparent 70%)` }} />
+          </div>
+          {[
+            { src: 'https://placehold.co/280x580/0a0a0f/8B5CF6?text=Dashboard', y: yLeft, rot: -12, z: 10 },
+            { src: 'https://placehold.co/300x620/0a0a0f/06B6D4?text=POS', scale, y: undefined, rot: 0, z: 30 },
+            { src: 'https://placehold.co/280x580/0a0a0f/10B981?text=Reports', y: yRight, rot: 12, z: 10 },
+          ].map((p, i) => (
+            <motion.div key={i} style={{ y: p.y, scale: p.scale, rotate: p.rot, zIndex: p.z }}
+              className={`absolute rounded-[2.5rem] overflow-hidden border-4 border-white/10 shadow-2xl ${i === 1 ? 'mx-0' : i === 0 ? '-translate-x-44 hidden sm:block' : 'translate-x-44 hidden sm:block'}`}>
+              <img src={p.src} alt="app" className="block" loading="lazy" />
+            </motion.div>
+          ))}
+          {/* Floating badges */}
+          <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: 3, repeat: Infinity }}
+            className="absolute top-4 left-4 sm:left-20 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-xl border border-white/15 text-white text-xs font-semibold flex items-center gap-2">
+            ✓ Sale ₹2,500
+          </motion.div>
+          <motion.div animate={{ y: [0, 12, 0] }} transition={{ duration: 3.5, repeat: Infinity }}
+            className="absolute bottom-8 right-4 sm:right-20 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-xl border border-white/15 text-white text-xs font-semibold flex items-center gap-2">
+            📦 Stock Alert
+          </motion.div>
+        </div>
+      </div>
+    </SectionWrap>
+  );
+};
+
+// ─────────── Section 5: How it works ───────────
+const Steps = () => {
+  const STEPS = [
+    { n: '01', t: 'Download App', d: 'Install Zenpoo from Play Store or App Store.' },
+    { n: '02', t: 'Setup Your Store', d: 'Pick category, add products, customize.' },
+    { n: '03', t: 'Start Selling', d: 'Bill, print, share via WhatsApp instantly.' },
+  ];
+  return (
+    <SectionWrap className="py-24 lg:py-32">
+      <div className="max-w-6xl mx-auto px-4 lg:px-8">
+        <h2 className="text-4xl md:text-5xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Cal Sans, Inter, sans-serif' }}>
+          Get Started in 3 Minutes
+        </h2>
+        <p className="text-slate-400 text-center mb-16">No setup fees. No credit card.</p>
+        <div className="relative grid md:grid-cols-3 gap-6">
+          <svg className="absolute top-12 left-0 w-full h-2 hidden md:block" preserveAspectRatio="none">
+            <motion.line x1="0" y1="1" x2="100%" y2="1" stroke="url(#sg)" strokeWidth="2" strokeDasharray="4 8"
+              initial={{ pathLength: 0 }} whileInView={{ pathLength: 1 }} viewport={{ once: true }} transition={{ duration: 2 }} />
+            <defs><linearGradient id="sg" x1="0" x2="1"><stop offset="0%" stopColor={VIOLET} /><stop offset="50%" stopColor={CYAN} /><stop offset="100%" stopColor={EMERALD} /></linearGradient></defs>
+          </svg>
+          {STEPS.map((s, i) => (
+            <motion.div key={s.n} initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+              transition={{ delay: i * 0.15 }}
+              className="relative rounded-3xl p-7 bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center">
+              <div className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-2xl font-bold text-white mb-4"
+                style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}>{s.n}</div>
+              <h3 className="text-xl font-bold text-white mb-2">{s.t}</h3>
+              <p className="text-sm text-slate-400">{s.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </SectionWrap>
+  );
+};
+
+// ─────────── Section 6: Testimonials marquee ───────────
+const TESTI = [
+  { n: 'Rajesh K.', biz: 'Car Wash', t: 'Saves 30 minutes daily on billing. Game changer.', e: '🚗' },
+  { n: 'Priya S.', biz: 'Grocery', t: 'Manage 500+ products from my phone effortlessly.', e: '🛒' },
+  { n: 'Ahmed K.', biz: 'Electronics', t: 'Customer CRM bumped repeat sales by 40%.', e: '💻' },
+  { n: 'Dr. Meena', biz: 'Pharmacy', t: 'Expiry tracking ended our stock loss problem.', e: '💊' },
+  { n: 'Sunita D.', biz: 'Salon', t: 'Online store + appointments — clients love it.', e: '✂️' },
+  { n: 'Ravi P.', biz: 'Veggies', t: 'Weight billing is finally simple. Best app.', e: '🥬' },
+  { n: 'Amit', biz: 'Café', t: 'Beautiful UI, super fast. My staff learned in 5 min.', e: '☕' },
+  { n: 'Neha', biz: 'Fashion', t: 'GST reports in one tap — accountant loves it.', e: '👗' },
+];
+
+const Testimonials = () => (
+  <SectionWrap className="py-24 lg:py-32 overflow-hidden">
+    <div className="max-w-7xl mx-auto px-4 lg:px-8 mb-12">
+      <h2 className="text-4xl md:text-5xl font-bold text-white text-center" style={{ fontFamily: 'Cal Sans, Inter, sans-serif' }}>
+        Loved by Business Owners <span className="inline-block animate-pulse">⭐</span>
+      </h2>
+    </div>
+    {[1, -1].map((dir, row) => (
+      <div key={row} className="relative overflow-hidden mb-4 group" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
+        <motion.div className="flex gap-4 w-max group-hover:[animation-play-state:paused]"
+          animate={{ x: dir > 0 ? ['0%', '-50%'] : ['-50%', '0%'] }}
+          transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}>
+          {[...TESTI, ...TESTI].map((t, i) => (
+            <div key={i} className="w-[320px] shrink-0 rounded-2xl p-5 bg-white/[0.04] border border-white/10 backdrop-blur-xl">
+              <div className="flex gap-0.5 text-yellow-400 mb-2">{Array(5).fill(0).map((_, j) => <Star key={j} className="w-3.5 h-3.5 fill-current" />)}</div>
+              <p className="text-sm text-slate-200 mb-3">"{t.t}"</p>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg" style={{ background: `linear-gradient(135deg,${VIOLET}40,${CYAN}40)` }}>{t.e}</div>
+                <div><div className="text-sm font-semibold text-white">{t.n}</div><div className="text-xs text-slate-500">{t.biz}</div></div>
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    ))}
+  </SectionWrap>
+);
+
+// ─────────── Section 7: Pricing (dynamic) ───────────
+const Pricing = ({ navigate }: { navigate: (p: string) => void }) => {
+  const [yearly, setYearly] = useState(false);
+  const [plans, setPlans] = useState<any[]>([]);
+  useEffect(() => {
+    supabase.from('subscription_plans').select('*').eq('is_active', true).order('sort_order').then(({ data }) => setPlans(data || []));
+  }, []);
+  return (
+    <SectionWrap id="pricing" className="py-24 lg:py-32">
+      <div className="max-w-6xl mx-auto px-4 lg:px-8">
+        <h2 className="text-4xl md:text-6xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Cal Sans, Inter, sans-serif' }}>
+          Simple, Transparent <span style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Pricing</span>
+        </h2>
+        <p className="text-slate-400 text-center mb-10">Cancel anytime. No hidden fees.</p>
+        <div className="flex justify-center mb-14">
+          <div className="relative inline-flex p-1 rounded-full bg-white/[0.05] border border-white/10">
+            {['Monthly', 'Yearly'].map((l, i) => (
+              <button key={l} onClick={() => setYearly(i === 1)}
+                className={`relative z-10 px-6 py-2 text-sm font-semibold rounded-full transition-colors ${(i === 1) === yearly ? 'text-white' : 'text-slate-400'}`}>
+                {l} {i === 1 && <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">−20%</span>}
+              </button>
+            ))}
+            <motion.div className="absolute top-1 bottom-1 rounded-full"
+              style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}
+              animate={{ left: yearly ? '50%' : 4, right: yearly ? 4 : '50%' }} />
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {plans.map((p, i) => {
+            const price = yearly ? Number(p.yearly_price) : Number(p.monthly_price);
+            const popular = p.is_popular;
+            return (
+              <motion.div key={p.id} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className={`relative rounded-3xl p-7 bg-white/[0.03] backdrop-blur-xl ${popular ? 'border-2 md:scale-105' : 'border border-white/10'}`}
+                style={popular ? { borderImage: `linear-gradient(135deg,${VIOLET},${CYAN}) 1`, boxShadow: `0 20px 60px -20px ${VIOLET}80` } : {}}>
+                {popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold text-white"
+                    style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}>{p.badge || 'POPULAR'}</div>
+                )}
+                <h3 className="text-2xl font-bold text-white">{p.name}</h3>
+                <p className="text-sm text-slate-400 mb-5">{p.tagline}</p>
+                <div className="mb-6">
+                  <span className="text-5xl font-bold text-white">₹{price.toLocaleString('en-IN')}</span>
+                  <span className="text-sm text-slate-500 ml-1">/{yearly ? 'yr' : 'mo'}</span>
+                </div>
+                <ul className="space-y-2.5 mb-7">
+                  {(Array.isArray(p.features) ? p.features : []).map((f: string, j: number) => (
+                    <motion.li key={j} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+                      transition={{ delay: 0.4 + j * 0.05 }}
+                      className="flex items-start gap-2 text-sm text-slate-300">
+                      <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: EMERALD }} /> {f}
+                    </motion.li>
+                  ))}
+                </ul>
+                <button onClick={() => navigate('/auth')}
+                  className={`w-full py-3 rounded-xl font-semibold text-sm ${popular ? 'text-white' : 'text-white border border-white/15 bg-white/5 hover:bg-white/10'}`}
+                  style={popular ? { background: `linear-gradient(135deg,${VIOLET},${CYAN})` } : {}}>
+                  {p.cta_label || 'Get Started'}
+                </button>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </SectionWrap>
+  );
+};
+
+// ─────────── Section 8: CTA banner ───────────
+const CTABanner = ({ navigate }: { navigate: (p: string) => void }) => (
+  <SectionWrap className="py-24">
+    <motion.div initial={{ opacity: 0, scale: 0.95, filter: 'blur(8px)' }} whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} viewport={{ once: true }}
+      transition={{ duration: 0.8 }}
+      className="relative max-w-6xl mx-auto mx-4 lg:mx-auto rounded-[2.5rem] overflow-hidden p-10 md:p-20 text-center"
+      style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN},${EMERALD})` }}>
+      <div className="absolute inset-0 opacity-30" style={{ background: 'radial-gradient(circle at 30% 20%, white, transparent 50%)' }} />
+      <div className="relative z-10">
+        <h2 className="text-4xl md:text-6xl font-bold text-white mb-4" style={{ fontFamily: 'Cal Sans, Inter, sans-serif' }}>
+          Ready to Transform Your Business?
+        </h2>
+        <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">Join thousands of businesses billing smarter every day.</p>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <button onClick={() => navigate('/app')} className="px-8 py-4 rounded-xl bg-white text-black font-bold flex items-center gap-2 hover:scale-105 transition-transform">
+            <Download className="w-5 h-5" /> Get the App
+          </button>
+          <button onClick={() => navigate('/auth')} className="px-8 py-4 rounded-xl bg-black/30 backdrop-blur-xl border border-white/20 text-white font-bold hover:bg-black/40">
+            Start Free Trial
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  </SectionWrap>
+);
+
+// ─────────── Section 9: Footer ───────────
+const Footer = () => (
+  <footer id="footer" className="border-t border-white/5 bg-black/40 py-16">
+    <div className="max-w-7xl mx-auto px-4 lg:px-8 grid md:grid-cols-4 gap-10">
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg,${VIOLET},${CYAN})` }}><Zap className="w-4 h-4 text-white" /></div>
+          <span className="text-white font-bold text-lg">Zenpoo</span>
+        </div>
+        <p className="text-sm text-slate-400">Modern POS & business management. One app, every workflow.</p>
+      </div>
+      {[
+        { title: 'Product', links: ['Features', 'Pricing', 'App', 'Changelog'] },
+        { title: 'Company', links: ['About', 'Blog', 'Careers', 'Contact'] },
+        { title: 'Legal', links: ['Privacy', 'Terms', 'Security', 'GDPR'] },
+      ].map(c => (
+        <div key={c.title}>
+          <h4 className="text-sm font-bold text-white mb-3">{c.title}</h4>
+          <ul className="space-y-2 text-sm text-slate-400">{c.links.map(l => <li key={l}><a href="#" className="hover:text-white">{l}</a></li>)}</ul>
+        </div>
+      ))}
+    </div>
+    <div className="text-center text-xs text-slate-500 mt-12">Made with ♥ by Zenpoo Team · © {new Date().getFullYear()}</div>
+  </footer>
+);
+
+// ─────────── Page root ───────────
+const Index = () => {
+  const navigate = useNavigate();
+  const { scrollYProgress } = useScroll();
+  return (
+    <div className="relative min-h-screen text-white" style={{ background: '#050508' }}>
+      <Grain />
+      <CustomCursor />
+      <motion.div className="fixed top-0 left-0 right-0 h-0.5 z-50 origin-left"
+        style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg,${VIOLET},${CYAN},${EMERALD})` }} />
+      <Navbar navigate={navigate} />
+      <Hero navigate={navigate} />
+      <Features />
+      <Showcase />
+      <Steps />
+      <Testimonials />
+      <Pricing navigate={navigate} />
+      <CTABanner navigate={navigate} />
+      <Footer />
     </div>
   );
 };
