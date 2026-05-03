@@ -1,12 +1,14 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BarChart3, Package, Store, Users, Mail, Bell, Settings, Activity, Shield, ChevronLeft, ChevronRight, CreditCard, Menu, X, LogOut, Wallet, Smartphone, Cloud } from 'lucide-react';
+import { BarChart3, Package, Store, Users, Mail, Bell, Settings, Activity, Shield, ChevronLeft, ChevronRight, CreditCard, Menu, X, LogOut, Wallet, Smartphone, Cloud, Tag, Database, Zap } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const NAV_ITEMS = [
   { path: '/admin', icon: BarChart3, label: 'Overview' },
+  { path: '/admin/plans', icon: Tag, label: 'Plans' },
   { path: '/admin/payments', icon: CreditCard, label: 'Payment Gateway' },
+  { path: '/admin/paytest', icon: Zap, label: 'Payment Test' },
   { path: '/admin/settlements', icon: Wallet, label: 'Settlements' },
   { path: '/admin/releases', icon: Cloud, label: 'App Releases' },
   { path: '/admin/gallery', icon: Package, label: 'Gallery' },
@@ -14,6 +16,7 @@ const NAV_ITEMS = [
   { path: '/admin/users', icon: Users, label: 'Users' },
   { path: '/admin/smtp', icon: Mail, label: 'SMTP' },
   { path: '/admin/alerts', icon: Bell, label: 'Alerts' },
+  { path: '/admin/backup', icon: Database, label: 'Backup' },
   { path: '/admin/features', icon: Settings, label: 'Features' },
   { path: '/admin/analytics', icon: Activity, label: 'Analytics' },
 ];
