@@ -1058,6 +1058,60 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          badge: string | null
+          created_at: string
+          cta_label: string | null
+          currency: string
+          features: Json
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          monthly_price: number
+          name: string
+          slug: string
+          sort_order: number
+          tagline: string | null
+          updated_at: string
+          yearly_price: number
+        }
+        Insert: {
+          badge?: string | null
+          created_at?: string
+          cta_label?: string | null
+          currency?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          monthly_price?: number
+          name: string
+          slug: string
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+          yearly_price?: number
+        }
+        Update: {
+          badge?: string | null
+          created_at?: string
+          cta_label?: string | null
+          currency?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          monthly_price?: number
+          name?: string
+          slug?: string
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+          yearly_price?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
